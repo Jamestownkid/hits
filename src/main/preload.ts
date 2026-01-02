@@ -63,6 +63,12 @@ export interface HitsAPI {
   folder: {
     listMedia: (folderPath: string) => Promise<string[]>
   }
+  transcode: {
+    needsConvert: (filePath: string) => Promise<boolean>
+    isFFmpegInstalled: () => Promise<boolean>
+    convert: (filePath: string) => Promise<{ success: boolean; outputPath: string; error?: string }>
+    onProgress: (callback: (data: any) => void) => () => void
+  }
 }
 
 // expose the API to the renderer
@@ -141,6 +147,16 @@ const api: HitsAPI = {
   },
   folder: {
     listMedia: (folderPath) => ipcRenderer.invoke('folder:listMedia', folderPath),
+  },
+  transcode: {
+    needsConvert: (filePath) => ipcRenderer.invoke('transcode:needsConvert', filePath),
+    isFFmpegInstalled: () => ipcRenderer.invoke('transcode:isFFmpegInstalled'),
+    convert: (filePath) => ipcRenderer.invoke('transcode:convert', filePath),
+    onProgress: (callback) => {
+      const handler = (_: any, data: any) => callback(data)
+      ipcRenderer.on('transcode:progress', handler)
+      return () => ipcRenderer.removeListener('transcode:progress', handler)
+    },
   },
 }
 

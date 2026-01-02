@@ -10,6 +10,7 @@ import { brain } from '../core/brain'
 import { WhisperService, listModels, downloadModel, isModelDownloaded } from '../services/whisper'
 import { generateEditManifest, VIDEO_MODES } from '../services/claude'
 import { renderService, RenderProgress } from '../services/render'
+import { needsTranscode, transcodeVideo, isFFmpegInstalled, cleanupCache } from '../services/transcode'
 import { glob } from 'glob'
 
 // config store - persists settings
@@ -303,3 +304,29 @@ ipcMain.handle('folder:listMedia', async (_, folderPath: string) => {
     .filter(f => mediaExts.includes(f.split('.').pop()?.toLowerCase() || ''))
     .map(f => path.join(folderPath, f))
 })
+
+// TRANSCODE SERVICE - auto-converts HEVC/MOV to H.264 MP4
+ipcMain.handle('transcode:needsConvert', async (_, filePath: string) => {
+  return needsTranscode(filePath)
+})
+
+ipcMain.handle('transcode:isFFmpegInstalled', async () => {
+  return isFFmpegInstalled()
+})
+
+ipcMain.handle('transcode:convert', async (_, filePath: string) => {
+  try {
+    mainWindow?.webContents.send('transcode:progress', { percent: 0, stage: 'starting' })
+    
+    const outputPath = await transcodeVideo(filePath, (progress) => {
+      mainWindow?.webContents.send('transcode:progress', progress)
+    })
+    
+    return { success: true, outputPath }
+  } catch (err) {
+    return { success: false, error: String(err), outputPath: filePath }
+  }
+})
+
+// cleanup old cache on startup
+cleanupCache()

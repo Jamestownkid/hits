@@ -67,6 +67,7 @@ const WorkingOverlay: React.FC<{
   const progress = Math.min(99, (elapsed / Math.max(1, estimatedSeconds)) * 100)
   
   const config: Record<string, { emoji: string; text: string }> = {
+    converting: { emoji: '🔄', text: 'Converting Video' },
     transcribing: { emoji: '🎤', text: 'Transcribing Audio' },
     generating: { emoji: '🧠', text: 'Generating Edits' },
     rendering: { emoji: '🎬', text: 'Rendering Video' },
@@ -168,6 +169,8 @@ export const ProjectPage: React.FC = () => {
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
+  const [isConverting, setIsConverting] = useState(false)
+  const [convertProgress, setConvertProgress] = useState(0)
 
   useEffect(() => {
     if (!currentProject) return
@@ -185,8 +188,11 @@ export const ProjectPage: React.FC = () => {
       if (data.stage === 'generating_manifest') setProgress(70)
       if (data.stage === 'complete') setProgress(100)
     })
+    const cleanupTranscode = window.api.transcode.onProgress((data) => {
+      setConvertProgress(data.percent || 0)
+    })
 
-    return () => { cleanupWhisper(); cleanupRender(); cleanupClaude() }
+    return () => { cleanupWhisper(); cleanupRender(); cleanupClaude(); cleanupTranscode() }
   }, [currentProject, setRenderProgress, setProgress])
 
   if (!currentProject) {
@@ -209,9 +215,48 @@ export const ProjectPage: React.FC = () => {
     }
   }
 
+  // FILE SELECT - auto-converts MOV/HEVC to H.264 MP4
   const handleFileSelect = async () => {
     const filePath = await window.api.dialog.openFile()
-    if (filePath) { setSourceFile(filePath); setError(null) }
+    if (!filePath) return
+    
+    setError(null)
+    
+    // check if file needs transcoding (MOV, MKV, HEVC)
+    const needsConvert = await window.api.transcode.needsConvert(filePath)
+    
+    if (needsConvert) {
+      // check if ffmpeg is installed
+      const hasFFmpeg = await window.api.transcode.isFFmpegInstalled()
+      if (!hasFFmpeg) {
+        setError('MOV/HEVC files need ffmpeg installed. Run: sudo apt install ffmpeg')
+        setSourceFile(filePath) // use original anyway
+        return
+      }
+      
+      // auto-transcode to H.264
+      setIsConverting(true)
+      setConvertProgress(0)
+      setWorkStartTime(Date.now())
+      
+      try {
+        const result = await window.api.transcode.convert(filePath)
+        if (result.success) {
+          setSourceFile(result.outputPath)
+          console.log('[transcode] using converted file:', result.outputPath)
+        } else {
+          setError('Video conversion failed: ' + (result.error || 'unknown error'))
+          setSourceFile(filePath)  // fall back to original
+        }
+      } catch (err) {
+        setError('Video conversion failed: ' + String(err))
+        setSourceFile(filePath)
+      } finally {
+        setIsConverting(false)
+      }
+    } else {
+      setSourceFile(filePath)
+    }
   }
 
   // TRANSCRIBE - IMMEDIATE SPINNER ON CLICK
@@ -314,6 +359,7 @@ export const ProjectPage: React.FC = () => {
   }
 
   const getEstimatedTime = () => {
+    if (isConverting) return 60  // ~1 min for conversion
     if (isTranscribing) return 180
     if (isGenerating) return 30
     if (isRendering) return (currentProject?.manifest?.duration || 60) * 2
@@ -327,8 +373,8 @@ export const ProjectPage: React.FC = () => {
     return 'Working...'
   }
 
-  const isWorking = isTranscribing || isGenerating || isRendering
-  const currentStatus = isTranscribing ? 'transcribing' : isGenerating ? 'generating' : isRendering ? 'rendering' : 'idle'
+  const isWorking = isConverting || isTranscribing || isGenerating || isRendering
+  const currentStatus = isConverting ? 'converting' : isTranscribing ? 'transcribing' : isGenerating ? 'generating' : isRendering ? 'rendering' : 'idle'
 
   const getCurrentStep = () => {
     if (!currentProject.sourceFile) return 0
