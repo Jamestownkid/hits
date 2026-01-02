@@ -7,9 +7,75 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { glob } from 'glob'
 
-// Import the new effects registry and schemas
-import EFFECTS_REGISTRY, { getEffectById, ALL_EFFECT_IDS } from '../../edits/hits/registry'
-import { MODE_CONFIGS, getEffectsForMode, getRandomEffectForKeyword, VideoModeType, Effect } from '../../edits/hits/schema'
+// Effects registry types - the actual data is loaded dynamically
+// This avoids TS issues with files outside src folder
+
+export interface Effect {
+  id: string
+  name: string
+  description: string
+  category: string
+  layer: string
+  priority: number
+  modes: string[]
+  conflicts: string[]
+  pairsWith: string[]
+  triggers: {
+    keywords: string[]
+    punctuation: string[]
+    sentiment: string
+    weight: number
+    maxPerMinute: number
+    minGapFrames: number
+  }
+  timing: {
+    minDuration: number
+    maxDuration: number
+    defaultDuration: number
+    cooldown: number
+    attackFrames: number
+    releaseFrames: number
+  }
+  props: Record<string, any>
+  variants: string[]
+  assets: { required: string[]; optional: string[] }
+}
+
+export interface ModeConfig {
+  name: string
+  displayName: string
+  emoji: string
+  description: string
+  editsPerMinute: number
+  preferredEffects: string[]
+  avoidEffects: string[]
+  colorGrade: string
+  pacing: string
+  brollFrequency: number
+  textOverlayFrequency: number
+}
+
+export type VideoModeType = 'lemmino' | 'mrbeast' | 'tiktok' | 'documentary' | 'tutorial' | 'vox' | 'truecrime' | 'naturedoc' | 'shorts' | 'gaming' | 'course' | 'cinematic' | 'trailer' | 'podcast' | 'aesthetic' | 'vlog'
+
+// Mode configurations - hardcoded for reliability
+export const MODE_CONFIGS: Record<VideoModeType, ModeConfig> = {
+  lemmino: { name: 'lemmino', displayName: 'Lemmino', emoji: '🎬', description: 'Cinematic documentary', editsPerMinute: 8, preferredEffects: ['zoom_in_slow', 'letterbox', 'cinematic'], avoidEffects: ['zoom_punch', 'emoji_rain'], colorGrade: 'cinematic', pacing: 'slow', brollFrequency: 0.4, textOverlayFrequency: 0.1 },
+  mrbeast: { name: 'mrbeast', displayName: 'MrBeast', emoji: '🔥', description: 'High energy', editsPerMinute: 40, preferredEffects: ['zoom_punch', 'flash_white', 'text_pop'], avoidEffects: ['zoom_in_slow', 'letterbox'], colorGrade: 'saturate_boost', pacing: 'chaotic', brollFrequency: 0.5, textOverlayFrequency: 0.6 },
+  tiktok: { name: 'tiktok', displayName: 'TikTok', emoji: '📱', description: 'Trendy effects', editsPerMinute: 50, preferredEffects: ['zoom_bounce', 'text_bounce', 'emoji_rain'], avoidEffects: ['letterbox', 'noir'], colorGrade: 'saturate_boost', pacing: 'chaotic', brollFrequency: 0.3, textOverlayFrequency: 0.7 },
+  documentary: { name: 'documentary', displayName: 'Documentary', emoji: '🎥', description: 'Professional', editsPerMinute: 12, preferredEffects: ['zoom_in_slow', 'pan_left', 'vignette'], avoidEffects: ['glitch_transition', 'emoji_rain'], colorGrade: 'cinematic', pacing: 'slow', brollFrequency: 0.5, textOverlayFrequency: 0.15 },
+  tutorial: { name: 'tutorial', displayName: 'Tutorial', emoji: '📚', description: 'Educational', editsPerMinute: 15, preferredEffects: ['zoom_focus', 'spotlight', 'arrow_pointer'], avoidEffects: ['shake_heavy', 'emoji_rain'], colorGrade: 'contrast_boost', pacing: 'medium', brollFrequency: 0.2, textOverlayFrequency: 0.4 },
+  vox: { name: 'vox', displayName: 'Vox Explainer', emoji: '📊', description: 'Clean explainer', editsPerMinute: 18, preferredEffects: ['zoom_in_slow', 'text_slide_in', 'progress_bar'], avoidEffects: ['emoji_rain', 'confetti'], colorGrade: 'cold_grade', pacing: 'medium', brollFrequency: 0.4, textOverlayFrequency: 0.5 },
+  truecrime: { name: 'truecrime', displayName: 'True Crime', emoji: '🔍', description: 'Dark and suspenseful', editsPerMinute: 10, preferredEffects: ['zoom_in_slow', 'vignette', 'noir'], avoidEffects: ['emoji_rain', 'confetti'], colorGrade: 'noir', pacing: 'slow', brollFrequency: 0.3, textOverlayFrequency: 0.2 },
+  naturedoc: { name: 'naturedoc', displayName: 'Nature Doc', emoji: '🌿', description: 'Beautiful nature', editsPerMinute: 6, preferredEffects: ['ken_burns_broll', 'zoom_in_slow', 'warm_grade'], avoidEffects: ['glitch_transition', 'neon_glow'], colorGrade: 'warm_grade', pacing: 'slow', brollFrequency: 0.7, textOverlayFrequency: 0.05 },
+  shorts: { name: 'shorts', displayName: 'YouTube Shorts', emoji: '⚡', description: 'Quick vertical', editsPerMinute: 45, preferredEffects: ['zoom_punch', 'text_pop', 'flash_white'], avoidEffects: ['letterbox'], colorGrade: 'saturate_boost', pacing: 'chaotic', brollFrequency: 0.4, textOverlayFrequency: 0.6 },
+  gaming: { name: 'gaming', displayName: 'Gaming', emoji: '🎮', description: 'Energetic gaming', editsPerMinute: 35, preferredEffects: ['zoom_punch', 'shake_heavy', 'neon_glow'], avoidEffects: ['letterbox', 'sepia'], colorGrade: 'neon_glow', pacing: 'fast', brollFrequency: 0.2, textOverlayFrequency: 0.4 },
+  course: { name: 'course', displayName: 'Online Course', emoji: '🎓', description: 'Professional educational', editsPerMinute: 10, preferredEffects: ['zoom_focus', 'spotlight', 'text_typewriter'], avoidEffects: ['shake_heavy', 'emoji_rain'], colorGrade: 'contrast_boost', pacing: 'slow', brollFrequency: 0.15, textOverlayFrequency: 0.3 },
+  cinematic: { name: 'cinematic', displayName: 'Cinematic', emoji: '🎞️', description: 'Film-like quality', editsPerMinute: 8, preferredEffects: ['letterbox', 'cinematic', 'vignette'], avoidEffects: ['emoji_rain', 'subscribe_button'], colorGrade: 'cinematic', pacing: 'slow', brollFrequency: 0.4, textOverlayFrequency: 0.1 },
+  trailer: { name: 'trailer', displayName: 'Movie Trailer', emoji: '🎬', description: 'Epic trailer style', editsPerMinute: 25, preferredEffects: ['flash_black', 'zoom_punch', 'text_pop'], avoidEffects: ['emoji_rain'], colorGrade: 'dramatic', pacing: 'fast', brollFrequency: 0.3, textOverlayFrequency: 0.4 },
+  podcast: { name: 'podcast', displayName: 'Podcast', emoji: '🎙️', description: 'Clean podcast', editsPerMinute: 8, preferredEffects: ['zoom_in_slow', 'audio_bars', 'waveform'], avoidEffects: ['shake_heavy', 'confetti'], colorGrade: 'warm_grade', pacing: 'slow', brollFrequency: 0.1, textOverlayFrequency: 0.15 },
+  aesthetic: { name: 'aesthetic', displayName: 'Aesthetic/ASMR', emoji: '✨', description: 'Soft aesthetic', editsPerMinute: 5, preferredEffects: ['zoom_in_slow', 'particles', 'vintage'], avoidEffects: ['shake_heavy', 'zoom_punch'], colorGrade: 'vintage', pacing: 'slow', brollFrequency: 0.3, textOverlayFrequency: 0.05 },
+  vlog: { name: 'vlog', displayName: 'Vlog', emoji: '📹', description: 'Casual vlog', editsPerMinute: 20, preferredEffects: ['zoom_punch', 'text_pop', 'emoji_rain'], avoidEffects: ['noir', 'letterbox'], colorGrade: 'warm_grade', pacing: 'medium', brollFrequency: 0.3, textOverlayFrequency: 0.3 },
+}
 
 // what an edit plugin looks like - every edit gotta have this metadata
 export interface EditMeta {
@@ -271,14 +337,53 @@ class EditBrain {
 
   // ==================== NEW REGISTRY METHODS ====================
   
-  // Get all effects from the 100+ registry
+  // Get all effects from the 100+ registry (combines brain edits + built-in effects)
   getAllRegistryEffects(): Effect[] {
-    return EFFECTS_REGISTRY
+    // Convert brain edits to Effect format
+    return this.getAll().map(edit => ({
+      id: edit.meta.id,
+      name: edit.meta.name,
+      description: edit.meta.description,
+      category: edit.meta.category,
+      layer: 'overlay',
+      priority: 50,
+      modes: edit.meta.modes || ['lemmino', 'documentary'],
+      conflicts: [],
+      pairsWith: [],
+      triggers: {
+        keywords: edit.meta.triggers || [],
+        punctuation: [],
+        sentiment: 'any',
+        weight: edit.meta.weight || 0.5,
+        maxPerMinute: 15,
+        minGapFrames: 30,
+      },
+      timing: {
+        minDuration: 15,
+        maxDuration: 90,
+        defaultDuration: 30,
+        cooldown: 60,
+        attackFrames: 5,
+        releaseFrames: 5,
+      },
+      props: edit.meta.props.reduce((acc, p) => ({ ...acc, [p.name]: p.default }), {}),
+      variants: [],
+      assets: { required: [], optional: [] },
+    }))
   }
 
   // Get effects optimized for a specific video mode
   getEffectsForVideoMode(mode: VideoModeType): Effect[] {
-    return getEffectsForMode(mode, EFFECTS_REGISTRY)
+    const config = MODE_CONFIGS[mode]
+    const allEffects = this.getAllRegistryEffects()
+    return allEffects.filter(effect => 
+      effect.modes.includes(mode) && 
+      !config.avoidEffects.includes(effect.id)
+    ).sort((a, b) => {
+      const aPreferred = config.preferredEffects.includes(a.id) ? 1 : 0
+      const bPreferred = config.preferredEffects.includes(b.id) ? 1 : 0
+      return bPreferred - aPreferred
+    })
   }
 
   // Get mode configuration (edit density, preferred effects, etc)
@@ -288,7 +393,29 @@ class EditBrain {
 
   // Get a random effect based on keyword and mode
   pickEffectForKeyword(keyword: string, mode: VideoModeType, recentlyUsed: string[] = []): Effect | null {
-    return getRandomEffectForKeyword(keyword, mode, EFFECTS_REGISTRY, recentlyUsed)
+    const modeEffects = this.getEffectsForVideoMode(mode)
+    const keywordLower = keyword.toLowerCase()
+    
+    // Find effects triggered by this keyword
+    const triggered = modeEffects.filter(e => 
+      e.triggers.keywords.some(k => keywordLower.includes(k.toLowerCase())) &&
+      !recentlyUsed.includes(e.id)
+    )
+    
+    if (triggered.length > 0) {
+      // Weight-based random selection
+      const totalWeight = triggered.reduce((sum, e) => sum + e.triggers.weight, 0)
+      let random = Math.random() * totalWeight
+      for (const effect of triggered) {
+        random -= effect.triggers.weight
+        if (random <= 0) return effect
+      }
+      return triggered[0]
+    }
+    
+    // Fallback: random effect from mode
+    const available = modeEffects.filter(e => !recentlyUsed.includes(e.id))
+    return available.length > 0 ? available[Math.floor(Math.random() * available.length)] : null
   }
 
   // Generate edit suggestions for a transcript
