@@ -1,0 +1,40 @@
+{
+  "id": "subtitle",
+  "name": "Subtitle",
+  "category": "text",
+  "description": "clean subtitle text at the bottom of the screen. good for transcription display",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "text",
+      "type": "string",
+      "default": "",
+      "description": "subtitle text"
+    },
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#ffffff",
+      "description": "text color"
+    },
+    {
+      "name": "backgroundColor",
+      "type": "color",
+      "default": "rgba(0,0,0,0.7)",
+      "description": "background color"
+    },
+    {
+      "name": "fontSize",
+      "type": "number",
+      "default": 36,
+      "min": 18,
+      "max": 72,
+      "description": "font size"
+    }
+  ],
+  "triggers": ["caption", "subtitle", "transcript", "speech", "quote", "said"],
+  "modes": ["lemmino", "documentary", "tutorial"],
+  "weight": 0.6
+}
+

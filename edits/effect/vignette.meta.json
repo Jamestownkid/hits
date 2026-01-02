@@ -1,0 +1,30 @@
+{
+  "id": "vignette",
+  "name": "Vignette",
+  "category": "effect",
+  "description": "darkened edges for cinematic look. draws attention to the center of frame",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "intensity",
+      "type": "number",
+      "default": 0.6,
+      "min": 0.2,
+      "max": 1,
+      "description": "darkness intensity"
+    },
+    {
+      "name": "size",
+      "type": "number",
+      "default": 50,
+      "min": 20,
+      "max": 80,
+      "description": "vignette size (% from center)"
+    }
+  ],
+  "triggers": ["vignette", "focus", "cinematic", "dramatic"],
+  "modes": ["lemmino", "documentary", "beat-history"],
+  "weight": 0.3
+}
+

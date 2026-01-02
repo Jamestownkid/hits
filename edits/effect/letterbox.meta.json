@@ -1,0 +1,28 @@
+{
+  "id": "letterbox",
+  "name": "Letterbox",
+  "category": "effect",
+  "description": "cinematic black bars for that movie theater feel",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "amount",
+      "type": "number",
+      "default": 12,
+      "min": 5,
+      "max": 20,
+      "description": "bar height as percentage"
+    },
+    {
+      "name": "animate",
+      "type": "boolean",
+      "default": true,
+      "description": "animate bars sliding in"
+    }
+  ],
+  "triggers": ["cinematic", "movie", "film", "dramatic", "widescreen"],
+  "modes": ["lemmino", "documentary", "beat-history"],
+  "weight": 0.5
+}
+

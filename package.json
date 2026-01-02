@@ -1,0 +1,84 @@
+{
+  "name": "hits",
+  "version": "1.0.0",
+  "description": "plugin-based automated video editor - drop in edits and the brain figures out the rest",
+  "main": "dist/main/main/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:main\" \"npm run dev:renderer\"",
+    "dev:main": "tsc -p tsconfig.main.json && electron .",
+    "dev:renderer": "vite",
+    "build": "npm run build:main && npm run build:renderer",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "start": "electron .",
+    "remotion:preview": "remotion studio src/remotion/index.ts",
+    "remotion:render": "remotion render src/remotion/index.ts HitsVideo --gl=angle-egl",
+    "package:linux": "electron-builder --linux AppImage",
+    "edits:scan": "node scripts/scan-edits.mjs",
+    "edits:validate": "node scripts/validate-edits.mjs",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@remotion/cli": "^4.0.250",
+    "@remotion/renderer": "^4.0.250",
+    "@remotion/player": "^4.0.250",
+    "@remotion/media-utils": "^4.0.250",
+    "remotion": "^4.0.250",
+    "nodejs-whisper": "^0.1.18",
+    "electron-store": "^8.1.0",
+    "glob": "^10.3.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
+    "zustand": "^4.5.0",
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.330.0",
+    "clsx": "^2.1.0",
+    "chokidar": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "concurrently": "^8.2.2",
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12"
+  },
+  "build": {
+    "appId": "com.hits.editor",
+    "productName": "Hits",
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Video",
+      "icon": "assets/icons"
+    },
+    "files": [
+      "dist/**/*",
+      "edits/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets/",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "edits/",
+        "to": "edits/",
+        "filter": ["**/*"]
+      }
+    ]
+  }
+}
+

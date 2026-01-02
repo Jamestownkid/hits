@@ -1,0 +1,52 @@
+{
+  "id": "counter",
+  "name": "Counter",
+  "category": "text",
+  "description": "animated number counter for stats, money, scores",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "from",
+      "type": "number",
+      "default": 0,
+      "description": "starting number"
+    },
+    {
+      "name": "to",
+      "type": "number",
+      "default": 1000,
+      "description": "ending number"
+    },
+    {
+      "name": "prefix",
+      "type": "string",
+      "default": "",
+      "description": "text before number (like $)"
+    },
+    {
+      "name": "suffix",
+      "type": "string",
+      "default": "",
+      "description": "text after number (like %)"
+    },
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#ffffff",
+      "description": "text color"
+    },
+    {
+      "name": "fontSize",
+      "type": "number",
+      "default": 96,
+      "min": 36,
+      "max": 200,
+      "description": "font size"
+    }
+  ],
+  "triggers": ["number", "count", "stat", "money", "dollar", "percent", "score", "million", "thousand"],
+  "modes": ["mrbeast", "tiktok", "documentary", "beat-history"],
+  "weight": 0.7
+}
+

@@ -1,0 +1,125 @@
+// PRELOAD SCRIPT - exposes safe APIs to the renderer process
+// this is the bridge between electron main and react UI
+
+import { contextBridge, ipcRenderer } from 'electron'
+
+// type definitions for the API
+export interface HitsAPI {
+  window: {
+    minimize: () => Promise<void>
+    maximize: () => Promise<boolean>
+    close: () => Promise<void>
+    isMaximized: () => Promise<boolean>
+  }
+  config: {
+    get: (key: string) => Promise<any>
+    set: (key: string, value: any) => Promise<void>
+    getAll: () => Promise<Record<string, any>>
+  }
+  dialog: {
+    openFile: (filters?: any[]) => Promise<string | null>
+    openDirectory: () => Promise<string | null>
+    saveFile: (defaultName: string) => Promise<string | null>
+  }
+  brain: {
+    getEdits: () => Promise<any[]>
+    getEditsByCategory: (category: string) => Promise<any[]>
+    getEditsByMode: (mode: string) => Promise<any[]>
+    getModes: () => Promise<Record<string, any>>
+    rescan: () => Promise<number>
+    getCount: () => Promise<number>
+  }
+  whisper: {
+    transcribe: (videoPath: string) => Promise<{ success: boolean; data?: any; error?: string }>
+    onProgress: (callback: (data: any) => void) => () => void
+  }
+  claude: {
+    generateManifest: (transcript: any, mode: string, sourceVideo: string) => Promise<{ success: boolean; data?: any; error?: string }>
+  }
+  render: {
+    start: (manifest: any, outputPath: string) => Promise<{ success: boolean; error?: string }>
+    onProgress: (callback: (data: any) => void) => () => void
+  }
+  assets: {
+    listSfx: () => Promise<string[]>
+    listImages: () => Promise<string[]>
+    setDir: (dir: string) => Promise<boolean>
+  }
+  shell: {
+    openExternal: (url: string) => Promise<void>
+    showItemInFolder: (path: string) => Promise<void>
+  }
+  edits: {
+    openFolder: () => Promise<void>
+  }
+}
+
+// expose the API to the renderer
+const api: HitsAPI = {
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  },
+  config: {
+    get: (key) => ipcRenderer.invoke('config:get', key),
+    set: (key, value) => ipcRenderer.invoke('config:set', key, value),
+    getAll: () => ipcRenderer.invoke('config:getAll'),
+  },
+  dialog: {
+    openFile: (filters) => ipcRenderer.invoke('dialog:openFile', filters),
+    openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
+    saveFile: (defaultName) => ipcRenderer.invoke('dialog:saveFile', defaultName),
+  },
+  brain: {
+    getEdits: () => ipcRenderer.invoke('brain:getEdits'),
+    getEditsByCategory: (category) => ipcRenderer.invoke('brain:getEditsByCategory', category),
+    getEditsByMode: (mode) => ipcRenderer.invoke('brain:getEditsByMode', mode),
+    getModes: () => ipcRenderer.invoke('brain:getModes'),
+    rescan: () => ipcRenderer.invoke('brain:rescan'),
+    getCount: () => ipcRenderer.invoke('brain:getCount'),
+  },
+  whisper: {
+    transcribe: (videoPath) => ipcRenderer.invoke('whisper:transcribe', videoPath),
+    onProgress: (callback) => {
+      const handler = (_: any, data: any) => callback(data)
+      ipcRenderer.on('whisper:progress', handler)
+      return () => ipcRenderer.removeListener('whisper:progress', handler)
+    },
+  },
+  claude: {
+    generateManifest: (transcript, mode, sourceVideo) => 
+      ipcRenderer.invoke('claude:generateManifest', transcript, mode, sourceVideo),
+  },
+  render: {
+    start: (manifest, outputPath) => ipcRenderer.invoke('render:start', manifest, outputPath),
+    onProgress: (callback) => {
+      const handler = (_: any, data: any) => callback(data)
+      ipcRenderer.on('render:progress', handler)
+      return () => ipcRenderer.removeListener('render:progress', handler)
+    },
+  },
+  assets: {
+    listSfx: () => ipcRenderer.invoke('assets:listSfx'),
+    listImages: () => ipcRenderer.invoke('assets:listImages'),
+    setDir: (dir) => ipcRenderer.invoke('assets:setDir', dir),
+  },
+  shell: {
+    openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+    showItemInFolder: (path) => ipcRenderer.invoke('shell:showItemInFolder', path),
+  },
+  edits: {
+    openFolder: () => ipcRenderer.invoke('edits:openFolder'),
+  },
+}
+
+contextBridge.exposeInMainWorld('api', api)
+
+// type declaration for global window
+declare global {
+  interface Window {
+    api: HitsAPI
+  }
+}
+

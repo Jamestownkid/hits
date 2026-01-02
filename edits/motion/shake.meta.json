@@ -1,0 +1,36 @@
+{
+  "id": "shake",
+  "name": "Camera Shake",
+  "category": "motion",
+  "description": "camera shake effect for dramatic impact. hits hard on explosions and intense moments",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "intensity",
+      "type": "number",
+      "default": 10,
+      "min": 1,
+      "max": 30,
+      "description": "shake strength in pixels"
+    },
+    {
+      "name": "frequency",
+      "type": "number",
+      "default": 2,
+      "min": 1,
+      "max": 5,
+      "description": "shake speed multiplier"
+    },
+    {
+      "name": "decay",
+      "type": "boolean",
+      "default": true,
+      "description": "whether shake fades out over time"
+    }
+  ],
+  "triggers": ["explosion", "crash", "hit", "impact", "boom", "shock", "earthquake", "intense"],
+  "modes": ["mrbeast", "tiktok", "beat-history"],
+  "weight": 0.6
+}
+

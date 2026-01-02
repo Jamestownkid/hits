@@ -1,0 +1,28 @@
+{
+  "id": "chromatic_aberration",
+  "name": "Chromatic Aberration",
+  "category": "effect",
+  "description": "rgb color split effect for that trippy psychedelic look",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "amount",
+      "type": "number",
+      "default": 5,
+      "min": 2,
+      "max": 20,
+      "description": "split amount in pixels"
+    },
+    {
+      "name": "animate",
+      "type": "boolean",
+      "default": true,
+      "description": "animate the offset"
+    }
+  ],
+  "triggers": ["chromatic", "rgb", "split", "trippy", "psychedelic", "distort"],
+  "modes": ["tiktok", "mrbeast", "beat-history"],
+  "weight": 0.5
+}
+

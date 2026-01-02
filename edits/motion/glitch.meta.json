@@ -1,0 +1,30 @@
+{
+  "id": "glitch",
+  "name": "Glitch",
+  "category": "motion",
+  "description": "digital glitch effect with horizontal slice distortion. that vhs look everyone loves",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "intensity",
+      "type": "number",
+      "default": 20,
+      "min": 5,
+      "max": 50,
+      "description": "glitch intensity"
+    },
+    {
+      "name": "slices",
+      "type": "number",
+      "default": 5,
+      "min": 2,
+      "max": 15,
+      "description": "number of horizontal slices"
+    }
+  ],
+  "triggers": ["glitch", "error", "malfunction", "broken", "digital", "corrupt"],
+  "modes": ["tiktok", "mrbeast", "beat-history"],
+  "weight": 0.6
+}
+

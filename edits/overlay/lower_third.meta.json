@@ -1,0 +1,32 @@
+{
+  "id": "lower_third",
+  "name": "Lower Third",
+  "category": "overlay",
+  "description": "name/title card at bottom of screen for introducing people or topics",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "title",
+      "type": "string",
+      "default": "Name",
+      "description": "main title text"
+    },
+    {
+      "name": "subtitle",
+      "type": "string",
+      "default": "",
+      "description": "smaller subtitle text"
+    },
+    {
+      "name": "accentColor",
+      "type": "color",
+      "default": "#3b82f6",
+      "description": "accent bar color"
+    }
+  ],
+  "triggers": ["name", "introduce", "person", "title", "guest", "speaker", "who"],
+  "modes": ["documentary", "lemmino", "tutorial", "beat-history"],
+  "weight": 0.6
+}
+

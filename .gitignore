@@ -1,0 +1,29 @@
+# deps
+node_modules/
+
+# build
+dist/
+release/
+*.AppImage
+
+# logs
+*.log
+npm-debug.log*
+
+# env
+.env
+.env.local
+
+# ide
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# os
+.DS_Store
+Thumbs.db
+
+# temp
+*.tmp
+.cache/

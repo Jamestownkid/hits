@@ -1,0 +1,28 @@
+{
+  "id": "flash_transition",
+  "name": "Flash Transition",
+  "category": "transition",
+  "description": "white flash between scenes. classic transition that hits hard",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#ffffff",
+      "description": "flash color"
+    },
+    {
+      "name": "intensity",
+      "type": "number",
+      "default": 1,
+      "min": 0.5,
+      "max": 1,
+      "description": "maximum opacity"
+    }
+  ],
+  "triggers": ["transition", "flash", "cut", "scene", "change", "next"],
+  "modes": ["mrbeast", "tiktok", "beat-history"],
+  "weight": 0.6
+}
+

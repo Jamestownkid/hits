@@ -1,0 +1,35 @@
+{
+  "id": "sound_hit",
+  "name": "Sound Hit",
+  "category": "audio",
+  "description": "plays a sound effect synced to the video. use the AUDIO folder sfx for maximum impact",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "src",
+      "type": "file",
+      "default": "",
+      "description": "path to audio file (mp3, wav)"
+    },
+    {
+      "name": "volume",
+      "type": "number",
+      "default": 1,
+      "min": 0,
+      "max": 2,
+      "description": "volume level (1 = normal)"
+    },
+    {
+      "name": "startFrom",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "description": "start position in seconds"
+    }
+  ],
+  "triggers": ["sound", "sfx", "effect", "boom", "whoosh", "hit", "ding", "pop"],
+  "modes": ["mrbeast", "tiktok", "beat-history"],
+  "weight": 0.8
+}
+

@@ -1,0 +1,41 @@
+{
+  "id": "progress_bar",
+  "name": "Progress Bar",
+  "category": "overlay",
+  "description": "animated progress indicator for showing completion or timeline",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "progress",
+      "type": "number",
+      "default": 100,
+      "min": 0,
+      "max": 100,
+      "description": "target progress percentage"
+    },
+    {
+      "name": "animate",
+      "type": "boolean",
+      "default": true,
+      "description": "animate progress fill"
+    },
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#22c55e",
+      "description": "bar fill color"
+    },
+    {
+      "name": "position",
+      "type": "select",
+      "default": "bottom",
+      "options": ["top", "bottom"],
+      "description": "bar position"
+    }
+  ],
+  "triggers": ["progress", "loading", "completion", "timeline", "step"],
+  "modes": ["tutorial", "documentary"],
+  "weight": 0.5
+}
+

@@ -1,0 +1,36 @@
+{
+  "id": "zoom_pulse",
+  "name": "Zoom Pulse",
+  "category": "motion",
+  "description": "Quick zoom in/out effect for emphasis. slaps on important moments and key words",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "intensity",
+      "type": "number",
+      "default": 1.15,
+      "min": 1.0,
+      "max": 2.0,
+      "description": "how much to zoom (1.0 = none, 1.3 = 30% zoom)"
+    },
+    {
+      "name": "direction",
+      "type": "select",
+      "default": "pulse",
+      "options": ["in", "out", "pulse"],
+      "description": "zoom direction - in, out, or pulse (in then out)"
+    },
+    {
+      "name": "easing",
+      "type": "select",
+      "default": "spring",
+      "options": ["spring", "linear"],
+      "description": "animation easing type"
+    }
+  ],
+  "triggers": ["emphasis", "important", "key", "highlight", "boom", "impact", "wow", "crazy"],
+  "modes": ["lemmino", "mrbeast", "tiktok", "documentary", "beat-history"],
+  "weight": 0.8
+}
+

@@ -1,0 +1,35 @@
+{
+  "id": "spin",
+  "name": "Spin",
+  "category": "motion",
+  "description": "rotation effect for transitions and dramatic moments. pairs well with zoom",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "direction",
+      "type": "select",
+      "default": "clockwise",
+      "options": ["clockwise", "counterclockwise"],
+      "description": "rotation direction"
+    },
+    {
+      "name": "rotations",
+      "type": "number",
+      "default": 1,
+      "min": 0.5,
+      "max": 3,
+      "description": "number of full rotations"
+    },
+    {
+      "name": "withZoom",
+      "type": "boolean",
+      "default": true,
+      "description": "add zoom during spin"
+    }
+  ],
+  "triggers": ["spin", "rotate", "turn", "twist", "whirl"],
+  "modes": ["tiktok", "mrbeast"],
+  "weight": 0.5
+}
+

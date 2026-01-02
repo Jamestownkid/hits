@@ -1,0 +1,35 @@
+{
+  "id": "ken_burns",
+  "name": "Ken Burns",
+  "category": "motion",
+  "description": "slow pan and zoom effect for documentary style. makes images feel cinematic and alive",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "src",
+      "type": "file",
+      "default": "",
+      "description": "image source path"
+    },
+    {
+      "name": "direction",
+      "type": "select",
+      "default": "zoom-in",
+      "options": ["zoom-in", "zoom-out", "pan-left", "pan-right"],
+      "description": "movement direction"
+    },
+    {
+      "name": "amount",
+      "type": "number",
+      "default": 0.1,
+      "min": 0.05,
+      "max": 0.3,
+      "description": "how much to move (0.1 = 10%)"
+    }
+  ],
+  "triggers": ["show", "image", "picture", "photo", "display", "reveal"],
+  "modes": ["lemmino", "documentary"],
+  "weight": 0.7
+}
+

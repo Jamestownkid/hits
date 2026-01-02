@@ -1,0 +1,27 @@
+{
+  "id": "zoom_transition",
+  "name": "Zoom Transition",
+  "category": "transition",
+  "description": "circular zoom in/out transition for scene changes",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "direction",
+      "type": "select",
+      "default": "in",
+      "options": ["in", "out"],
+      "description": "zoom direction"
+    },
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#000000",
+      "description": "transition color"
+    }
+  ],
+  "triggers": ["transition", "scene", "change", "zoom", "circle"],
+  "modes": ["documentary", "tutorial", "lemmino"],
+  "weight": 0.5
+}
+

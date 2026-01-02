@@ -1,0 +1,27 @@
+{
+  "id": "wipe",
+  "name": "Wipe",
+  "category": "transition",
+  "description": "directional wipe transition. slides across the screen",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "direction",
+      "type": "select",
+      "default": "left",
+      "options": ["left", "right", "up", "down"],
+      "description": "wipe direction"
+    },
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#000000",
+      "description": "wipe color"
+    }
+  ],
+  "triggers": ["wipe", "slide", "transition", "scene"],
+  "modes": ["documentary", "tutorial"],
+  "weight": 0.5
+}
+

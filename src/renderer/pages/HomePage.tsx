@@ -1,0 +1,210 @@
+// HOME PAGE - mode selection and getting started
+// this is where users pick their editing style
+
+import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Film, Zap, Sparkles, Clock, MonitorPlay, Smartphone, Square } from 'lucide-react'
+import { useStore } from '../hooks/useStore'
+import clsx from 'clsx'
+
+// video modes with their vibes
+const videoModes = [
+  {
+    id: 'lemmino',
+    name: 'LEMMiNO',
+    description: 'Smooth documentary style with elegant transitions',
+    hits: '~20/min',
+    gradient: 'mode-lemmino',
+  },
+  {
+    id: 'mrbeast',
+    name: 'MrBeast',
+    description: 'High energy with lots of sound effects',
+    hits: '~40/min',
+    gradient: 'mode-mrbeast',
+  },
+  {
+    id: 'tiktok',
+    name: 'TikTok',
+    description: 'Rapid fire edits maximum engagement',
+    hits: '~55/min',
+    gradient: 'mode-tiktok',
+  },
+  {
+    id: 'documentary',
+    name: 'Documentary',
+    description: 'Classic B-roll with subtle effects',
+    hits: '~15/min',
+    gradient: 'mode-documentary',
+  },
+  {
+    id: 'tutorial',
+    name: 'Tutorial',
+    description: 'Clean educational focus',
+    hits: '~12/min',
+    gradient: 'mode-tutorial',
+  },
+  {
+    id: 'beat-history',
+    name: 'Beat History',
+    description: 'True crime dramatic reveals',
+    hits: '~35/min',
+    gradient: 'mode-beat-history',
+  },
+]
+
+// output format options
+const outputFormats = [
+  { id: 'horizontal', icon: MonitorPlay, label: '16:9', desc: 'YouTube' },
+  { id: 'vertical', icon: Smartphone, label: '9:16', desc: 'TikTok/Reels' },
+  { id: 'square', icon: Square, label: '1:1', desc: 'Instagram' },
+]
+
+export const HomePage: React.FC = () => {
+  const navigate = useNavigate()
+  const { createProject, projects, setCurrentProject, outputFormat, setOutputFormat } = useStore()
+  const [editCount, setEditCount] = useState(0)
+
+  // load edit count
+  useEffect(() => {
+    window.api.brain.getCount().then(setEditCount)
+  }, [])
+
+  // handle mode selection - create project and go to it
+  const handleModeSelect = (modeId: string) => {
+    const mode = videoModes.find((m) => m.id === modeId)
+    createProject(`${mode?.name || 'New'} Project`, modeId)
+    navigate('/project')
+  }
+
+  // handle recent project click
+  const handleProjectClick = (project: any) => {
+    setCurrentProject(project)
+    navigate('/project')
+  }
+
+  return (
+    <div className="p-8 max-w-6xl mx-auto">
+      {/* header */}
+      <div className="mb-10">
+        <h1 className="font-display text-4xl font-bold mb-3 bg-gradient-to-r from-hits-accent to-hits-accent-bright bg-clip-text text-transparent">
+          Welcome to Hits
+        </h1>
+        <p className="text-hits-muted text-lg">
+          Plugin-based video editing powered by AI. Drop in edits and let the brain figure out the rest.
+        </p>
+        <div className="mt-4 flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-2 text-hits-accent">
+            <Zap size={16} />
+            <span>{editCount} edit plugins loaded</span>
+          </div>
+          <button
+            onClick={() => window.api.edits.openFolder()}
+            className="text-hits-muted hover:text-hits-text underline"
+          >
+            Open edits folder
+          </button>
+        </div>
+      </div>
+
+      {/* output format selection */}
+      <section className="mb-8">
+        <h2 className="text-sm font-semibold text-hits-muted mb-3 uppercase tracking-wider">
+          Output Format
+        </h2>
+        <div className="flex gap-3">
+          {outputFormats.map((format) => {
+            const Icon = format.icon
+            return (
+              <button
+                key={format.id}
+                onClick={() => setOutputFormat(format.id as any)}
+                className={clsx(
+                  'flex items-center gap-3 px-4 py-3 rounded-lg border transition-all',
+                  outputFormat === format.id
+                    ? 'border-hits-accent bg-hits-accent/10 text-hits-accent'
+                    : 'border-hits-border hover:border-hits-accent/50'
+                )}
+              >
+                <Icon size={20} />
+                <div className="text-left">
+                  <div className="font-medium">{format.label}</div>
+                  <div className="text-xs text-hits-muted">{format.desc}</div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* mode selection */}
+      <section className="mb-12">
+        <h2 className="text-sm font-semibold text-hits-muted mb-3 uppercase tracking-wider flex items-center gap-2">
+          <Sparkles size={16} className="text-hits-accent" />
+          Choose Your Style
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {videoModes.map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => handleModeSelect(mode.id)}
+              className="card hover:border-hits-accent transition-all duration-200 text-left group"
+            >
+              <div
+                className={`w-12 h-12 rounded-lg ${mode.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
+              >
+                <Film size={24} className="text-white" />
+              </div>
+              <h3 className="font-display font-semibold text-lg mb-1">{mode.name}</h3>
+              <p className="text-sm text-hits-muted mb-3">{mode.description}</p>
+              <div className="flex items-center gap-2 text-xs text-hits-accent">
+                <Zap size={12} />
+                {mode.hits} edits
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* recent projects */}
+      {projects.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-hits-muted mb-3 uppercase tracking-wider flex items-center gap-2">
+            <Clock size={16} className="text-hits-accent" />
+            Recent Projects
+          </h2>
+          <div className="space-y-2">
+            {projects.slice(0, 5).map((project) => (
+              <button
+                key={project.id}
+                onClick={() => handleProjectClick(project)}
+                className="w-full card hover:border-hits-accent transition-colors flex items-center justify-between py-4"
+              >
+                <div className="text-left">
+                  <h3 className="font-medium">{project.name}</h3>
+                  <p className="text-sm text-hits-muted">
+                    {project.mode} · {project.status}
+                  </p>
+                </div>
+                <div className="text-xs text-hits-muted">
+                  {new Date(project.updatedAt).toLocaleDateString()}
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* empty state */}
+      {projects.length === 0 && (
+        <section className="text-center py-12 card">
+          <Film size={48} className="mx-auto text-hits-muted mb-4" />
+          <p className="text-hits-muted">
+            No projects yet. Pick a style above to start editing.
+          </p>
+        </section>
+      )}
+    </div>
+  )
+}
+

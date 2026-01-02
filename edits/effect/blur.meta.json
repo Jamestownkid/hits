@@ -1,0 +1,28 @@
+{
+  "id": "blur",
+  "name": "Blur",
+  "category": "effect",
+  "description": "gaussian blur effect for focus transitions and dreamy looks",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "amount",
+      "type": "number",
+      "default": 10,
+      "min": 2,
+      "max": 30,
+      "description": "blur amount in pixels"
+    },
+    {
+      "name": "animateIn",
+      "type": "boolean",
+      "default": true,
+      "description": "animate blur in and out"
+    }
+  ],
+  "triggers": ["blur", "focus", "dream", "memory", "flashback"],
+  "modes": ["lemmino", "documentary", "beat-history"],
+  "weight": 0.4
+}
+

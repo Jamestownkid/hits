@@ -1,0 +1,48 @@
+{
+  "id": "typewriter",
+  "name": "Typewriter",
+  "category": "text",
+  "description": "text typing effect like a terminal. classic hacker vibes",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "text",
+      "type": "string",
+      "default": "Hello World...",
+      "description": "text to type"
+    },
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#00ff00",
+      "description": "text color"
+    },
+    {
+      "name": "fontSize",
+      "type": "number",
+      "default": 48,
+      "min": 24,
+      "max": 120,
+      "description": "font size"
+    },
+    {
+      "name": "showCursor",
+      "type": "boolean",
+      "default": true,
+      "description": "show blinking cursor"
+    },
+    {
+      "name": "speed",
+      "type": "number",
+      "default": 1,
+      "min": 0.5,
+      "max": 3,
+      "description": "typing speed multiplier"
+    }
+  ],
+  "triggers": ["type", "terminal", "code", "hacker", "computer", "message"],
+  "modes": ["lemmino", "documentary", "beat-history"],
+  "weight": 0.7
+}
+

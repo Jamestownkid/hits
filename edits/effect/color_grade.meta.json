@@ -1,0 +1,29 @@
+{
+  "id": "color_grade",
+  "name": "Color Grade",
+  "category": "effect",
+  "description": "color grading overlay for mood and atmosphere. makes your video look cinematic",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "preset",
+      "type": "select",
+      "default": "cinematic",
+      "options": ["warm", "cold", "cinematic", "vintage", "dramatic"],
+      "description": "color grading preset"
+    },
+    {
+      "name": "intensity",
+      "type": "number",
+      "default": 1,
+      "min": 0.3,
+      "max": 1,
+      "description": "effect intensity"
+    }
+  ],
+  "triggers": ["color", "grade", "mood", "atmosphere", "look", "style"],
+  "modes": ["lemmino", "documentary", "beat-history"],
+  "weight": 0.4
+}
+

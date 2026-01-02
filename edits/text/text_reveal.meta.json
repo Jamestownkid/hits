@@ -1,0 +1,48 @@
+{
+  "id": "text_reveal",
+  "name": "Text Reveal",
+  "category": "text",
+  "description": "animated text that pops in with style. perfect for keywords and important phrases",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "text",
+      "type": "string",
+      "default": "TEXT",
+      "description": "the text to display"
+    },
+    {
+      "name": "style",
+      "type": "select",
+      "default": "scale",
+      "options": ["scale", "slide", "fade", "typewriter"],
+      "description": "animation style"
+    },
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#ffffff",
+      "description": "text color"
+    },
+    {
+      "name": "fontSize",
+      "type": "number",
+      "default": 72,
+      "min": 24,
+      "max": 200,
+      "description": "font size in pixels"
+    },
+    {
+      "name": "position",
+      "type": "select",
+      "default": "center",
+      "options": ["center", "bottom", "top"],
+      "description": "text position on screen"
+    }
+  ],
+  "triggers": ["text", "title", "name", "word", "keyword", "highlight", "important", "quote"],
+  "modes": ["lemmino", "mrbeast", "tiktok", "documentary", "tutorial", "beat-history"],
+  "weight": 0.9
+}
+

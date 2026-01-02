@@ -1,0 +1,42 @@
+{
+  "id": "image_drop",
+  "name": "Image Drop",
+  "category": "overlay",
+  "description": "drops an image onto the video with animation. good for b-roll and reaction images",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "src",
+      "type": "file",
+      "default": "",
+      "description": "image source path"
+    },
+    {
+      "name": "position",
+      "type": "select",
+      "default": "center",
+      "options": ["center", "left", "right", "corner"],
+      "description": "where to place the image"
+    },
+    {
+      "name": "size",
+      "type": "number",
+      "default": 40,
+      "min": 10,
+      "max": 90,
+      "description": "image size as % of screen width"
+    },
+    {
+      "name": "animation",
+      "type": "select",
+      "default": "drop",
+      "options": ["drop", "fade", "scale"],
+      "description": "entrance animation"
+    }
+  ],
+  "triggers": ["image", "picture", "photo", "show", "display", "broll", "reaction"],
+  "modes": ["mrbeast", "tiktok", "documentary", "tutorial"],
+  "weight": 0.7
+}
+

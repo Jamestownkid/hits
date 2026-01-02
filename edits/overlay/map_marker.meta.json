@@ -1,0 +1,42 @@
+{
+  "id": "map_marker",
+  "name": "Map Marker",
+  "category": "overlay",
+  "description": "location pin animation for showing where something happened",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "location",
+      "type": "string",
+      "default": "Location",
+      "description": "location label text"
+    },
+    {
+      "name": "x",
+      "type": "number",
+      "default": 50,
+      "min": 0,
+      "max": 100,
+      "description": "horizontal position %"
+    },
+    {
+      "name": "y",
+      "type": "number",
+      "default": 50,
+      "min": 0,
+      "max": 100,
+      "description": "vertical position %"
+    },
+    {
+      "name": "color",
+      "type": "color",
+      "default": "#ef4444",
+      "description": "pin color"
+    }
+  ],
+  "triggers": ["location", "place", "where", "map", "city", "country", "here"],
+  "modes": ["documentary", "lemmino", "beat-history"],
+  "weight": 0.6
+}
+

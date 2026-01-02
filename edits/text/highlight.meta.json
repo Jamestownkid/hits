@@ -1,0 +1,40 @@
+{
+  "id": "highlight",
+  "name": "Highlight",
+  "category": "text",
+  "description": "text with marker highlight animation. like someone drawing with a highlighter",
+  "author": "hits-core",
+  "version": "1.0.0",
+  "props": [
+    {
+      "name": "text",
+      "type": "string",
+      "default": "IMPORTANT",
+      "description": "text to highlight"
+    },
+    {
+      "name": "highlightColor",
+      "type": "color",
+      "default": "#fef08a",
+      "description": "highlighter color"
+    },
+    {
+      "name": "textColor",
+      "type": "color",
+      "default": "#000000",
+      "description": "text color"
+    },
+    {
+      "name": "fontSize",
+      "type": "number",
+      "default": 64,
+      "min": 24,
+      "max": 150,
+      "description": "font size"
+    }
+  ],
+  "triggers": ["highlight", "important", "note", "key", "remember", "point"],
+  "modes": ["tutorial", "documentary", "lemmino"],
+  "weight": 0.7
+}
+
