@@ -95,6 +95,19 @@ export class RenderService {
     console.log('[render] manifest:', JSON.stringify(manifest, null, 2).slice(0, 500))
     console.log('[render] duration:', manifest.duration, 'seconds @', manifest.fps, 'fps')
 
+    // VALIDATE VIDEO FILE EXISTS before rendering
+    if (manifest.sourceVideo) {
+      const videoPath = manifest.sourceVideo.replace(/^file:\/\//, '')
+      if (!fs.existsSync(videoPath)) {
+        throw new Error(`Video file not found: ${videoPath}`)
+      }
+      const stats = fs.statSync(videoPath)
+      if (stats.size < 1000) {
+        throw new Error(`Video file appears empty or corrupt: ${videoPath}`)
+      }
+      console.log('[render] verified video:', videoPath, Math.round(stats.size / 1024), 'KB')
+    }
+
     // make sure we have valid values
     const fps = manifest.fps || 30
     const duration = manifest.duration || 30
@@ -129,6 +142,9 @@ export class RenderService {
       codec: 'h264',
       outputLocation: outputPath,
       inputProps: { manifest },
+      
+      // TIMEOUT: 2 minutes instead of 28 seconds - gives video time to load
+      timeoutInMilliseconds: 120000,
       
       // GPU settings for linux + ALLOW FILE:// URLS
       chromiumOptions: {

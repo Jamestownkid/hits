@@ -37,12 +37,12 @@ function getCachedPath(filePath: string): string | null {
   return null
 }
 
-// check if file needs transcoding (MOV, MKV, or HEVC)
+// check if file needs transcoding - INCLUDES .mp4 because iPhone videos can be HEVC!
 export function needsTranscode(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase()
-  // these formats often have HEVC or other problematic codecs
-  const needsCheck = ['.mov', '.mkv', '.hevc', '.h265', '.webm']
-  return needsCheck.includes(ext)
+  // IMPORTANT: include .mp4 - many iPhone/screen recordings are HEVC in mp4 container
+  const videoContainers = ['.mp4', '.m4v', '.mov', '.mkv', '.avi', '.webm', '.hevc', '.h265']
+  return videoContainers.includes(ext)
 }
 
 // probe video codec using ffprobe
@@ -181,19 +181,29 @@ export async function transcodeVideo(
       })
       
       ffmpeg.on('close', (code) => {
-        if (code === 0 && fs.existsSync(outputPath)) {
-          console.log('[transcode] complete:', outputPath)
-          onProgress?.({ percent: 100, stage: 'complete' })
-          resolve(outputPath)
+        if (code === 0) {
+          // WAIT for file to flush to disk, then VERIFY it exists and has size
+          setTimeout(() => {
+            if (fs.existsSync(outputPath)) {
+              const stats = fs.statSync(outputPath)
+              if (stats.size > 1000) { // at least 1KB
+                console.log('[transcode] verified:', outputPath, Math.round(stats.size / 1024), 'KB')
+                onProgress?.({ percent: 100, stage: 'complete' })
+                resolve(outputPath)
+                return
+              }
+            }
+            console.error('[transcode] output missing or empty, using original')
+            resolve(inputPath)
+          }, 500) // 500ms delay to ensure file is written
         } else {
           console.error('[transcode] failed with code:', code)
-          // fall back to original file
           resolve(inputPath)
         }
       })
       
       ffmpeg.on('error', (err) => {
-        console.error('[transcode] error:', err)
+        console.error('[transcode] ffmpeg error:', err)
         resolve(inputPath)  // fall back to original
       })
     })
