@@ -1,96 +1,207 @@
-// EDIT RENDERER - this connects the brain to remotion
-// brain tells us what edits to use, we load em and render em
-// NOW WITH PROPER NULL CHECKS and FILE URL CONVERSION
+// EDIT RENDERER - renders the video with effects
+// NO NODE.JS IMPORTS - this runs in browser/Remotion context!
+// All edit components are statically imported to avoid bundling issues
 
-import React, { Suspense, lazy, useMemo } from 'react'
-import { AbsoluteFill, Sequence, useVideoConfig, Video, Img, Audio } from 'remotion'
-import { brain, RegisteredEdit } from './brain'
+import React, { useMemo } from 'react'
+import { AbsoluteFill, Sequence, useVideoConfig, Video, Audio, Img, useCurrentFrame, interpolate, spring } from 'remotion'
 import { EditInstance, Scene, EditManifest } from '../types/manifest'
 
 // re-export types for backwards compatibility
 export type { EditInstance, Scene, EditManifest }
 
 // CONVERT LOCAL PATHS TO file:// URLS
-// browsers cant read /home/... directly - gotta use file:// protocol
 const toBrowserSrc = (p: string | undefined | null): string => {
   if (!p) return ''
-  
-  // already a URL - leave it alone
   if (/^(https?|file|blob|data):\/\//i.test(p)) return p
-  
-  // Windows path like C:\Users\...
-  if (/^[a-zA-Z]:\\/.test(p)) {
-    const normalized = p.replace(/\\/g, '/')
-    return `file:///${encodeURI(normalized)}`
-  }
-  
-  // Linux/Mac absolute path like /home/...
-  if (p.startsWith('/')) {
-    return `file://${encodeURI(p)}` // encodes spaces, (), etc.
-  }
-  
-  return p // relative path - let it be
+  if (/^[a-zA-Z]:\\/.test(p)) return `file:///${encodeURI(p.replace(/\\/g, '/'))}`
+  if (p.startsWith('/')) return `file://${encodeURI(p)}`
+  return p
 }
 
-// component cache so we dont import the same component twice
-const componentCache = new Map<string, React.LazyExoticComponent<any>>()
+// ============================================
+// BUILT-IN EDIT COMPONENTS
+// These are all the effects we can apply
+// ============================================
 
-function getComponent(edit: RegisteredEdit): React.LazyExoticComponent<any> {
-  if (!componentCache.has(edit.meta.id)) {
-    // dynamically import the component - this is the magic
-    const loader = () => import(/* @vite-ignore */ edit.componentPath)
-    componentCache.set(edit.meta.id, lazy(loader))
-  }
-  return componentCache.get(edit.meta.id)!
+// ZOOM PULSE - quick zoom in/out
+const ZoomPulse: React.FC<{ intensity?: number; durationInFrames: number }> = ({ intensity = 1.15, durationInFrames }) => {
+  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const scale = spring({ fps, frame, config: { damping: 12 }, durationInFrames })
+  const zoom = interpolate(scale, [0, 0.5, 1], [1, intensity, 1])
+  return <AbsoluteFill style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }} />
 }
 
-// renders a single edit instance
-interface EditRendererProps {
-  instance: EditInstance
-  fps: number
-}
-
-export const EditRenderer: React.FC<EditRendererProps> = ({ instance, fps }) => {
-  const edit = brain.get(instance.editId)
-  
-  if (!edit) {
-    console.warn(`[renderer] unknown edit: ${instance.editId} - check your /edits folder`)
-    return null
-  }
-
-  // merge default props with the ones from manifest
-  const mergedProps = {
-    ...brain.getDefaultProps(instance.editId),
-    ...instance.props,
-    // always inject timing info so components can animate properly
-    durationInFrames: Math.round(instance.duration * fps),
-  }
-
-  const Component = getComponent(edit)
-  
+// TEXT REVEAL - pop in text
+const TextReveal: React.FC<{ text?: string; fontSize?: number; color?: string; durationInFrames: number }> = ({ 
+  text = '', fontSize = 64, color = 'white', durationInFrames 
+}) => {
+  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const scale = spring({ fps, frame, config: { damping: 10 }, durationInFrames: Math.min(15, durationInFrames) })
   return (
-    <Suspense fallback={null}>
-      <Component {...mergedProps} />
-    </Suspense>
+    <AbsoluteFill style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{
+        fontSize, fontWeight: 'bold', color,
+        textShadow: '2px 2px 10px rgba(0,0,0,0.8)',
+        transform: `scale(${scale})`, opacity: scale
+      }}>
+        {text}
+      </div>
+    </AbsoluteFill>
   )
 }
 
-// renders all edits for a scene
-interface SceneRendererProps {
-  scene: Scene
-  fps: number
-  sceneStartFrame: number
+// SHAKE - camera shake effect
+const Shake: React.FC<{ intensity?: number; durationInFrames: number }> = ({ intensity = 10, durationInFrames }) => {
+  const frame = useCurrentFrame()
+  const decay = interpolate(frame, [0, durationInFrames], [1, 0], { extrapolateRight: 'clamp' })
+  // deterministic pseudo-random based on frame for consistent renders
+  const x = Math.sin(frame * 12.9898) * intensity * decay
+  const y = Math.cos(frame * 78.233) * intensity * decay
+  return <AbsoluteFill style={{ transform: `translate(${x}px, ${y}px)` }} />
 }
 
-export const SceneRenderer: React.FC<SceneRendererProps> = ({ 
-  scene, 
-  fps, 
-  sceneStartFrame 
-}) => {
-  // SAFETY CHECK - edits might be undefined
+// FLASH - white flash
+const Flash: React.FC<{ durationInFrames: number }> = ({ durationInFrames }) => {
+  const frame = useCurrentFrame()
+  const opacity = interpolate(frame, [0, durationInFrames / 2, durationInFrames], [0, 1, 0], { extrapolateRight: 'clamp' })
+  return <AbsoluteFill style={{ backgroundColor: 'white', opacity }} />
+}
+
+// VIGNETTE - dark edges
+const Vignette: React.FC<{ opacity?: number; durationInFrames: number }> = ({ opacity = 0.6, durationInFrames }) => {
+  return (
+    <AbsoluteFill style={{
+      background: `radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,${opacity}) 100%)`
+    }} />
+  )
+}
+
+// COLOR GRADE - apply color filter
+const ColorGrade: React.FC<{ preset?: string; durationInFrames: number }> = ({ preset = 'cinematic', durationInFrames }) => {
+  const filters: Record<string, string> = {
+    cinematic: 'contrast(110%) saturate(90%)',
+    warm: 'sepia(20%) saturate(110%)',
+    cold: 'saturate(90%) hue-rotate(10deg)',
+    dramatic: 'contrast(120%) saturate(80%)',
+    vintage: 'sepia(30%) contrast(105%)',
+  }
+  return <AbsoluteFill style={{ filter: filters[preset] || filters.cinematic, pointerEvents: 'none' }} />
+}
+
+// KEN BURNS - slow pan/zoom
+const KenBurns: React.FC<{ direction?: string; durationInFrames: number }> = ({ direction = 'in', durationInFrames }) => {
+  const frame = useCurrentFrame()
+  const progress = interpolate(frame, [0, durationInFrames], [0, 1], { extrapolateRight: 'clamp' })
+  const scale = direction === 'in' 
+    ? interpolate(progress, [0, 1], [1, 1.15])
+    : interpolate(progress, [0, 1], [1.15, 1])
+  return <AbsoluteFill style={{ transform: `scale(${scale})`, transformOrigin: 'center' }} />
+}
+
+// LETTERBOX - cinematic bars
+const Letterbox: React.FC<{ size?: number; durationInFrames: number }> = ({ size = 80, durationInFrames }) => {
+  const frame = useCurrentFrame()
+  const fadeIn = interpolate(frame, [0, 15], [0, 1], { extrapolateRight: 'clamp' })
+  return (
+    <>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: size, background: '#000', opacity: fadeIn }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: size, background: '#000', opacity: fadeIn }} />
+    </>
+  )
+}
+
+// GLITCH - digital glitch effect
+const Glitch: React.FC<{ intensity?: number; durationInFrames: number }> = ({ intensity = 5, durationInFrames }) => {
+  const frame = useCurrentFrame()
+  const offsetX = Math.sin(frame * 123.456) * intensity
+  const offsetY = Math.cos(frame * 789.012) * intensity * 0.5
+  const hue = (frame * 10) % 360
+  return (
+    <AbsoluteFill style={{
+      transform: `translate(${offsetX}px, ${offsetY}px)`,
+      filter: `hue-rotate(${hue}deg)`,
+      mixBlendMode: 'difference',
+      opacity: 0.3
+    }} />
+  )
+}
+
+// MAP OF EDIT TYPES TO COMPONENTS
+const EDIT_COMPONENTS: Record<string, React.FC<any>> = {
+  zoom_pulse: ZoomPulse,
+  zoom_rapid: ZoomPulse,
+  zoom_slow: KenBurns,
+  text_reveal: TextReveal,
+  text_pop: TextReveal,
+  subtitle: TextReveal,
+  shake: Shake,
+  shake_intense: Shake,
+  flash: Flash,
+  flash_transition: Flash,
+  vignette: Vignette,
+  color_grade: ColorGrade,
+  ken_burns: KenBurns,
+  letterbox: Letterbox,
+  glitch: Glitch,
+  glitch_heavy: Glitch,
+  // style-specific edits map to base components
+  lemmino_cinematic: KenBurns,
+  mrbeast_energy: ZoomPulse,
+  tiktok_rapid: ZoomPulse,
+  documentary_broll: KenBurns,
+  tutorial_highlight: ZoomPulse,
+  vox_animated: TextReveal,
+  truecrime_dramatic: Vignette,
+  gaming_montage: Shake,
+  podcast_minimal: Vignette,
+  aesthetic_chill: ColorGrade,
+}
+
+// SUBTITLE OVERLAY
+const SubtitleOverlay: React.FC<{ text: string }> = ({ text }) => {
+  if (!text) return null
+  return (
+    <AbsoluteFill style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 60 }}>
+      <div style={{
+        background: 'rgba(0,0,0,0.75)',
+        padding: '12px 24px',
+        borderRadius: 8,
+        maxWidth: '80%'
+      }}>
+        <p style={{ color: 'white', fontSize: 28, margin: 0, textAlign: 'center' }}>{text}</p>
+      </div>
+    </AbsoluteFill>
+  )
+}
+
+// RENDER A SINGLE EDIT
+const EditRenderer: React.FC<{ edit: EditInstance; fps: number; sceneStart: number }> = ({ edit, fps, sceneStart }) => {
+  const editStart = Math.round(edit.at * fps) - sceneStart
+  const editDuration = Math.round(edit.duration * fps)
+  
+  if (editStart < 0 || editDuration <= 0) return null
+  
+  // Get the component for this edit type
+  const Component = EDIT_COMPONENTS[edit.editId]
+  if (!Component) {
+    console.warn(`[renderer] Unknown edit type: ${edit.editId}`)
+    return null
+  }
+  
+  return (
+    <Sequence from={Math.max(0, editStart)} durationInFrames={Math.max(1, editDuration)}>
+      <Component {...(edit.props || {})} durationInFrames={editDuration} />
+    </Sequence>
+  )
+}
+
+// RENDER A SCENE
+const SceneRenderer: React.FC<{ scene: Scene; fps: number; sceneStart: number }> = ({ scene, fps, sceneStart }) => {
   const edits = scene.edits || []
   
-  // group edits by layer for proper z-ordering
+  // Group by layer
   const layers = useMemo(() => {
     const grouped: Record<number, EditInstance[]> = {}
     for (const edit of edits) {
@@ -98,147 +209,71 @@ export const SceneRenderer: React.FC<SceneRendererProps> = ({
       if (!grouped[layer]) grouped[layer] = []
       grouped[layer].push(edit)
     }
-    // sort by layer number so lower layers render first
-    return Object.entries(grouped)
-      .sort(([a], [b]) => Number(a) - Number(b))
+    return Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b))
   }, [edits])
-
+  
   return (
     <>
       {layers.map(([layerNum, layerEdits]) => (
         <AbsoluteFill key={layerNum} style={{ zIndex: Number(layerNum) }}>
-          {layerEdits.map((edit, i) => {
-            const editStartFrame = Math.round(edit.at * fps) - sceneStartFrame
-            const editDurationFrames = Math.round(edit.duration * fps)
-            
-            return (
-              <Sequence
-                key={`${edit.editId}-${i}`}
-                from={Math.max(0, editStartFrame)}
-                durationInFrames={Math.max(1, editDurationFrames)}
-              >
-                <EditRenderer instance={edit} fps={fps} />
-              </Sequence>
-            )
-          })}
+          {layerEdits.map((edit, i) => (
+            <EditRenderer key={`${edit.editId}-${i}`} edit={edit} fps={fps} sceneStart={sceneStart} />
+          ))}
         </AbsoluteFill>
       ))}
+      {scene.text && <SubtitleOverlay text={scene.text} />}
     </>
   )
 }
 
-// SIMPLE TEXT OVERLAY - fallback when no fancy edits
-const SimpleTextOverlay: React.FC<{ text: string }> = ({ text }) => {
-  return (
-    <AbsoluteFill style={{ 
-      display: 'flex', 
-      alignItems: 'flex-end', 
-      justifyContent: 'center',
-      paddingBottom: 80 
-    }}>
-      <div style={{
-        background: 'rgba(0,0,0,0.7)',
-        padding: '16px 32px',
-        borderRadius: 8,
-        maxWidth: '80%'
-      }}>
-        <p style={{ color: 'white', fontSize: 32, margin: 0, textAlign: 'center' }}>
-          {text}
-        </p>
-      </div>
-    </AbsoluteFill>
-  )
-}
-
-// MAIN VIDEO COMPONENT - renders the full manifest
+// MAIN VIDEO COMPONENT
 interface MainVideoProps {
   manifest: EditManifest
 }
 
 export const MainVideo: React.FC<MainVideoProps> = ({ manifest }) => {
-  const { fps, width, height } = useVideoConfig()
-  
-  // SAFETY: default scenes to empty array
+  const { fps } = useVideoConfig()
   const scenes = manifest.scenes || []
-  
-  // convert source video path to file:// URL
   const videoSrc = toBrowserSrc(manifest.sourceVideo)
   
-  console.log('[MainVideo] rendering manifest:', {
-    mode: manifest.mode,
-    duration: manifest.duration,
-    scenesCount: scenes.length,
-    sourceVideo: manifest.sourceVideo,
-    videoSrc: videoSrc
-  })
+  console.log('[MainVideo] rendering:', { mode: manifest.mode, duration: manifest.duration, scenes: scenes.length })
   
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      {/* source video as the base layer */}
-      {videoSrc && (
+      {/* Source video */}
+      {videoSrc ? (
         <AbsoluteFill>
           <Video
             src={videoSrc}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => {
-              console.error('[MainVideo] Video error:', e)
-            }}
+            onError={(e) => console.error('[MainVideo] Video load error:', e)}
           />
         </AbsoluteFill>
-      )}
-      
-      {/* if no source video, show a placeholder */}
-      {!videoSrc && (
+      ) : (
         <AbsoluteFill style={{ 
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          <div style={{ color: '#666', fontSize: 24 }}>
-            No source video - audio only mode
-          </div>
+          <p style={{ color: '#666', fontSize: 24 }}>Audio-only mode</p>
         </AbsoluteFill>
       )}
       
-      {/* render each scene with its edits on top */}
+      {/* Render scenes */}
       {scenes.length > 0 ? (
         scenes.map((scene, i) => {
-          const sceneStartFrame = Math.round(scene.start * fps)
-          const sceneDurationFrames = Math.round((scene.end - scene.start) * fps)
-          
-          // skip invalid scenes
-          if (sceneDurationFrames <= 0) return null
+          const sceneStart = Math.round(scene.start * fps)
+          const sceneDuration = Math.round((scene.end - scene.start) * fps)
+          if (sceneDuration <= 0) return null
           
           return (
-            <Sequence
-              key={i}
-              from={sceneStartFrame}
-              durationInFrames={Math.max(1, sceneDurationFrames)}
-            >
-              <SceneRenderer 
-                scene={scene} 
-                fps={fps} 
-                sceneStartFrame={sceneStartFrame}
-              />
-              {/* show transcript text as subtitle if available */}
-              {scene.text && (
-                <SimpleTextOverlay text={scene.text} />
-              )}
+            <Sequence key={i} from={sceneStart} durationInFrames={Math.max(1, sceneDuration)}>
+              <SceneRenderer scene={scene} fps={fps} sceneStart={sceneStart} />
             </Sequence>
           )
         })
       ) : (
-        // no scenes - just show a basic overlay
-        <AbsoluteFill style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(0,0,0,0.5)'
-        }}>
-          <p style={{ color: 'white', fontSize: 32 }}>
-            {manifest.mode?.toUpperCase() || 'VIDEO'} MODE
-          </p>
+        <AbsoluteFill style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ color: 'white', fontSize: 32 }}>{manifest.mode?.toUpperCase() || 'VIDEO'} MODE</p>
         </AbsoluteFill>
       )}
     </AbsoluteFill>
