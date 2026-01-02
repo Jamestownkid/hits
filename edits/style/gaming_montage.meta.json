@@ -1,0 +1,47 @@
+{
+  "id": "gaming_montage",
+  "name": "Gaming Montage",
+  "category": "style",
+  "layer": "effect",
+  "priority": 9,
+  "description": "Fast hype edits for gaming content - RGB, glitch, speed ramps",
+
+  "component": "./gaming_montage.tsx",
+  "variants": ["rgb_split", "speed_zoom", "glitch", "flash", "shake"],
+
+  "assets": {
+    "required": [],
+    "optional": []
+  },
+
+  "props": {
+    "effectType": { "type": "enum", "options": ["rgb", "speed", "glitch", "flash", "shake"], "default": "rgb" },
+    "intensity": { "type": "number", "default": 1, "min": 0.5, "max": 2 },
+    "color": { "type": "color", "default": "#ff00ff" },
+    "glitchFrequency": { "type": "number", "default": 0.3, "min": 0.1, "max": 0.8 }
+  },
+
+  "timing": {
+    "min": 5,
+    "max": 20,
+    "default": 12,
+    "cooldown": 20
+  },
+
+  "triggers": {
+    "keywords": ["kill", "win", "clutch", "play", "shot", "headshot", "victory", "GG", "let's go", "insane", "crazy", "god", "clip", "gaming", "streak", "combo", "perfect"],
+    "punctuation": ["!", "!!"],
+    "weight": 0.9,
+    "max_per_minute": 50
+  },
+
+  "conflicts": ["lemmino_cinematic", "documentary_broll", "podcast_minimal", "aesthetic_chill"],
+  "pairs_with": ["bass_drop", "sound_hit", "flash_transition", "shake"],
+  "modes": ["gaming", "mrbeast", "tiktok"],
+
+  "fallback": {
+    "enabled": true,
+    "interval": 30,
+    "description": "Keep the hype up with effects every second for montage pacing"
+  }
+}

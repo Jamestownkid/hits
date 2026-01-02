@@ -58,6 +58,7 @@
     "directories": {
       "output": "release"
     },
+    "asar": false,
     "linux": {
       "target": ["AppImage"],
       "category": "Video",
@@ -67,7 +68,8 @@
     "files": [
       "dist/**/*",
       "edits/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "node_modules/**/*"
     ],
     "extraResources": [
       {

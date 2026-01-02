@@ -1,0 +1,50 @@
+{
+  "id": "lemmino_cinematic",
+  "name": "Lemmino Cinematic",
+  "category": "style",
+  "layer": "background",
+  "priority": 1,
+  "description": "Smooth slow zoom with letterbox bars for documentary feel",
+
+  "component": "./lemmino_cinematic.tsx",
+  "variants": ["zoom_in", "zoom_out", "pan_left", "pan_right"],
+
+  "assets": {
+    "required": [],
+    "optional": ["./assets/vignette.png"]
+  },
+
+  "props": {
+    "zoomTarget": { "type": "number", "default": 1.15, "min": 1.0, "max": 1.4 },
+    "zoomDirection": { "type": "enum", "options": ["in", "out"], "default": "in" },
+    "letterboxSize": { "type": "number", "default": 80, "min": 0, "max": 200 },
+    "fadeFrames": { "type": "number", "default": 30, "min": 10, "max": 60 },
+    "easing": { "type": "enum", "options": ["linear", "easeInOut", "smooth"], "default": "smooth" },
+    "vignette": { "type": "boolean", "default": true },
+    "vignetteOpacity": { "type": "number", "default": 0.25, "min": 0, "max": 0.8 }
+  },
+
+  "timing": {
+    "min": 60,
+    "max": 1800,
+    "default": 150,
+    "cooldown": 180
+  },
+
+  "triggers": {
+    "keywords": ["story", "history", "mystery", "years", "discovered", "evidence", "investigation", "began", "ancient", "century", "unknown", "case", "theory", "research", "found", "secret"],
+    "punctuation": ["...", "—"],
+    "weight": 0.6,
+    "max_per_minute": 4
+  },
+
+  "conflicts": ["shake_effect", "zoom_pulse", "mrbeast_energy", "glitch", "gaming_montage"],
+  "pairs_with": ["ambient_drone", "text_reveal", "color_grade", "vignette"],
+  "modes": ["lemmino", "documentary", "truecrime", "aesthetic"],
+
+  "fallback": {
+    "enabled": true,
+    "interval": 300,
+    "description": "Apply slow cinematic zoom every 10 seconds as base effect"
+  }
+}

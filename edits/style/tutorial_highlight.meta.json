@@ -1,0 +1,51 @@
+{
+  "id": "tutorial_highlight",
+  "name": "Tutorial Highlight",
+  "category": "style",
+  "layer": "overlay",
+  "priority": 7,
+  "description": "Clean highlight box for pointing things out in tutorials",
+
+  "component": "./tutorial_highlight.tsx",
+  "variants": ["box", "circle", "arrow", "underline"],
+
+  "assets": {
+    "required": [],
+    "optional": ["./assets/arrow.png"]
+  },
+
+  "props": {
+    "x": { "type": "number", "default": 0.5, "min": 0, "max": 1 },
+    "y": { "type": "number", "default": 0.5, "min": 0, "max": 1 },
+    "width": { "type": "number", "default": 0.3, "min": 0.1, "max": 0.8 },
+    "height": { "type": "number", "default": 0.2, "min": 0.1, "max": 0.6 },
+    "color": { "type": "color", "default": "#3b82f6" },
+    "strokeWidth": { "type": "number", "default": 4, "min": 2, "max": 8 },
+    "label": { "type": "string", "default": "" },
+    "pulseEnabled": { "type": "boolean", "default": true }
+  },
+
+  "timing": {
+    "min": 30,
+    "max": 180,
+    "default": 60,
+    "cooldown": 90
+  },
+
+  "triggers": {
+    "keywords": ["click", "here", "this", "button", "select", "option", "step", "look", "notice", "important", "see", "check", "tap", "press", "open"],
+    "punctuation": [],
+    "weight": 0.7,
+    "max_per_minute": 12
+  },
+
+  "conflicts": ["mrbeast_energy", "gaming_montage"],
+  "pairs_with": ["text_reveal", "zoom_pulse", "sound_hit"],
+  "modes": ["tutorial", "vox", "documentary"],
+
+  "fallback": {
+    "enabled": false,
+    "interval": 0,
+    "description": "Only trigger on keywords - no random highlights"
+  }
+}

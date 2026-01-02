@@ -1,10 +1,12 @@
 // SIDEBAR - navigation and quick actions
 // keeps things organized and accessible
+// now with JOB TRACKER so u can see running processes!!
 
 import React, { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Home, Film, Puzzle, Settings, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { useStore } from '../hooks/useStore'
+import { JobTracker } from './JobTracker'
 import clsx from 'clsx'
 
 const navItems = [
@@ -28,11 +30,11 @@ export const Sidebar: React.FC = () => {
     <div
       className={clsx(
         'h-full bg-hits-surface border-r border-hits-border flex flex-col transition-all duration-200',
-        sidebarCollapsed ? 'w-16' : 'w-56'
+        sidebarCollapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* nav items */}
-      <nav className="flex-1 py-4">
+      <nav className="py-4">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = location.pathname === item.path
@@ -56,6 +58,12 @@ export const Sidebar: React.FC = () => {
           )
         })}
       </nav>
+
+      {/* JOB TRACKER - shows all running jobs so user can navigate away */}
+      {!sidebarCollapsed && <JobTracker />}
+
+      {/* spacer */}
+      <div className="flex-1" />
 
       {/* edit count indicator */}
       {!sidebarCollapsed && (

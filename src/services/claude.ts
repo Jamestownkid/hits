@@ -1,79 +1,92 @@
 // CLAUDE SERVICE - generates edit manifests
-// SIMPLIFIED to avoid JSON truncation errors
+// NOW WITH HARD-CODED EDIT DENSITY - no more weak 17 edit BS
+// MrBeast = 40 edits/min, TikTok = 55 edits/min etc.
 
 import Anthropic from '@anthropic-ai/sdk'
 import { EditManifest, Scene, EditInstance } from '../types/manifest'
 
-// 10 video styles with edit configs
+// HARD-CODED EDIT DENSITY - edits per minute for each mode
+// this is the REAL number of hits that should happen
 export const VIDEO_MODES: Record<string, {
   name: string
   description: string
-  editFrequency: number
+  editsPerMinute: number  // HARD CODED - this many edits per minute NO EXCEPTIONS
+  icon: string
   preferredEdits: string[]
 }> = {
   mrbeast: {
     name: 'MrBeast',
     description: 'High energy with SFX',
-    editFrequency: 3,
-    preferredEdits: ['zoom_pulse', 'shake', 'text_reveal', 'flash_transition', 'sound_hit']
+    editsPerMinute: 40,  // 40 HITS PER MINUTE
+    icon: '💰',
+    preferredEdits: ['zoom_pulse', 'shake', 'flash_transition', 'sound_hit', 'text_reveal', 'mrbeast_energy']
   },
   lemmino: {
-    name: 'Lemmino',
+    name: 'LEMMiNO',
     description: 'Smooth documentary',
-    editFrequency: 8,
-    preferredEdits: ['ken_burns', 'text_reveal', 'color_grade', 'vignette']
+    editsPerMinute: 20,
+    icon: '🎬',
+    preferredEdits: ['ken_burns', 'lemmino_cinematic', 'vignette', 'color_grade', 'text_reveal']
   },
   tiktok: {
     name: 'TikTok',
     description: 'Rapid fire edits',
-    editFrequency: 2,
-    preferredEdits: ['zoom_pulse', 'glitch', 'subtitle', 'flash_transition']
+    editsPerMinute: 55,  // 55 HITS PER MINUTE - insane
+    icon: '📱',
+    preferredEdits: ['tiktok_rapid', 'zoom_pulse', 'glitch', 'flash_transition', 'subtitle']
   },
   documentary: {
     name: 'Documentary',
     description: 'Classic B-roll',
-    editFrequency: 10,
-    preferredEdits: ['ken_burns', 'lower_third', 'color_grade']
+    editsPerMinute: 15,
+    icon: '🎥',
+    preferredEdits: ['documentary_broll', 'ken_burns', 'lower_third', 'color_grade', 'vignette']
   },
   tutorial: {
     name: 'Tutorial',
     description: 'Educational',
-    editFrequency: 12,
-    preferredEdits: ['highlight', 'counter', 'progress_bar', 'subtitle']
+    editsPerMinute: 12,
+    icon: '📚',
+    preferredEdits: ['tutorial_highlight', 'highlight', 'counter', 'progress_bar', 'subtitle']
   },
   vox: {
     name: 'Vox Explainer',
     description: 'Animated text',
-    editFrequency: 6,
-    preferredEdits: ['typewriter', 'text_reveal', 'counter', 'ken_burns']
+    editsPerMinute: 25,
+    icon: '📊',
+    preferredEdits: ['vox_animated', 'typewriter', 'text_reveal', 'counter', 'ken_burns']
   },
   truecrime: {
     name: 'True Crime',
-    description: 'Dark dramatic',
-    editFrequency: 7,
-    preferredEdits: ['vignette', 'color_grade', 'text_reveal', 'letterbox']
+    description: 'Dark & dramatic',
+    editsPerMinute: 18,
+    icon: '🔍',
+    preferredEdits: ['truecrime_dramatic', 'vignette', 'color_grade', 'text_reveal', 'letterbox']
   },
   gaming: {
     name: 'Gaming',
     description: 'Fast montage',
-    editFrequency: 2,
-    preferredEdits: ['shake', 'glitch', 'zoom_pulse', 'chromatic_aberration']
+    editsPerMinute: 50,  // 50 HITS PER MINUTE
+    icon: '🎮',
+    preferredEdits: ['gaming_montage', 'shake', 'glitch', 'zoom_pulse', 'chromatic_aberration']
   },
   podcast: {
     name: 'Podcast',
     description: 'Minimal edits',
-    editFrequency: 15,
-    preferredEdits: ['lower_third', 'subtitle', 'ken_burns']
+    editsPerMinute: 8,
+    icon: '🎙️',
+    preferredEdits: ['podcast_minimal', 'lower_third', 'subtitle', 'ken_burns']
   },
   aesthetic: {
     name: 'Aesthetic',
     description: 'Chill vibes',
-    editFrequency: 10,
-    preferredEdits: ['ken_burns', 'color_grade', 'blur', 'vignette']
+    editsPerMinute: 10,
+    icon: '✨',
+    preferredEdits: ['aesthetic_chill', 'ken_burns', 'color_grade', 'blur', 'vignette']
   }
 }
 
-// Generate manifest - uses local generator with optional Claude enhancement
+// Generate manifest - HARD CODED edit counts
 export async function generateEditManifest(
   apiKey: string,
   transcript: any,
@@ -84,107 +97,89 @@ export async function generateEditManifest(
   console.log('[manifest] generating for mode:', mode)
   
   const modeConfig = VIDEO_MODES[mode] || VIDEO_MODES.documentary
-  const duration = Math.min(transcript.duration || 60, 120)
+  const duration = transcript.duration || 60
   
-  // Always use local generator first - it's reliable
-  const manifest = generateLocalManifest(transcript, mode, sourceVideo, duration, modeConfig)
+  // HARD CODED: Calculate exact number of edits needed
+  const totalEdits = Math.ceil((duration / 60) * modeConfig.editsPerMinute)
+  console.log(`[manifest] HARD CODED: ${totalEdits} edits for ${Math.round(duration)}s video (${modeConfig.editsPerMinute}/min)`)
   
-  // Optionally enhance with Claude if API key provided
-  if (apiKey && apiKey.length > 20) {
-    try {
-      const enhanced = await enhanceWithClaude(apiKey, manifest, transcript)
-      if (enhanced) {
-        console.log('[manifest] enhanced with Claude')
-        return enhanced
-      }
-    } catch (err) {
-      console.warn('[manifest] Claude enhancement failed, using local:', err)
-    }
-  }
+  // Generate manifest with EXACT edit count
+  const manifest = generateHardCodedManifest(
+    transcript,
+    mode,
+    sourceVideo,
+    duration,
+    modeConfig,
+    totalEdits
+  )
   
-  console.log('[manifest] using local generator, scenes:', manifest.scenes.length)
+  console.log('[manifest] created', manifest.scenes.length, 'scenes with', 
+    manifest.scenes.reduce((sum, s) => sum + s.edits.length, 0), 'total edits')
+  
   return manifest
 }
 
-// Local manifest generator - ALWAYS works
-function generateLocalManifest(
+// HARD CODED manifest generator - fills entire timeline with edits
+function generateHardCodedManifest(
   transcript: any,
   mode: string,
   sourceVideo: string,
   duration: number,
-  modeConfig: typeof VIDEO_MODES[string]
+  modeConfig: typeof VIDEO_MODES[string],
+  totalEdits: number
 ): EditManifest {
   const scenes: Scene[] = []
-  const interval = modeConfig.editFrequency
   const edits = modeConfig.preferredEdits
   
-  // Create scenes from transcript segments
-  let currentScene: Scene | null = null
-  let lastSceneStart = 0
+  // Calculate exact interval between edits
+  const editInterval = duration / totalEdits
+  console.log(`[manifest] edit interval: ${editInterval.toFixed(2)}s between each edit`)
   
-  for (const seg of (transcript.segments || [])) {
-    if (seg.start > duration) break
+  // Create scenes every 5 seconds for better organization
+  const sceneLength = 5
+  const numScenes = Math.ceil(duration / sceneLength)
+  
+  for (let i = 0; i < numScenes; i++) {
+    const sceneStart = i * sceneLength
+    const sceneEnd = Math.min((i + 1) * sceneLength, duration)
     
-    // Start new scene every ~10 seconds
-    if (!currentScene || seg.start - lastSceneStart > 10) {
-      if (currentScene) scenes.push(currentScene)
-      lastSceneStart = seg.start
+    // Find transcript text for this scene
+    const segmentTexts = (transcript.segments || [])
+      .filter((s: any) => s.start >= sceneStart && s.start < sceneEnd)
+      .map((s: any) => s.text)
+      .join(' ')
+    
+    const sceneEdits: EditInstance[] = []
+    
+    // Calculate how many edits belong in this scene
+    const editsInScene = Math.ceil((sceneEnd - sceneStart) / editInterval)
+    
+    for (let j = 0; j < editsInScene; j++) {
+      const editTime = sceneStart + (j * editInterval) + (Math.random() * editInterval * 0.5)
+      if (editTime >= sceneEnd) break
       
-      currentScene = {
-        start: seg.start,
-        end: seg.end,
-        text: seg.text,
-        edits: []
-      }
-      
-      // Add edit at scene start
+      // Pick random edit from preferred list
       const editId = edits[Math.floor(Math.random() * edits.length)]
-      currentScene.edits.push({
+      
+      // Vary duration based on mode
+      const minDur = mode === 'mrbeast' || mode === 'tiktok' || mode === 'gaming' ? 0.3 : 0.8
+      const maxDur = mode === 'mrbeast' || mode === 'tiktok' || mode === 'gaming' ? 1.5 : 3
+      
+      sceneEdits.push({
         editId,
-        at: seg.start,
-        duration: 1 + Math.random() * 2,
-        props: {},
-        layer: 1
+        at: editTime,
+        duration: minDur + Math.random() * (maxDur - minDur),
+        props: getRandomProps(editId, mode),
+        layer: (j % 3) + 1  // cycle through layers
       })
-    } else {
-      currentScene.end = seg.end
-      currentScene.text += ' ' + seg.text
     }
     
-    // Add edits at intervals
-    if (currentScene.edits.length < 3) {
-      const timeSinceLastEdit = seg.start - (currentScene.edits[currentScene.edits.length - 1]?.at || 0)
-      if (timeSinceLastEdit >= interval) {
-        const editId = edits[Math.floor(Math.random() * edits.length)]
-        currentScene.edits.push({
-          editId,
-          at: seg.start,
-          duration: 1 + Math.random(),
-          props: {},
-          layer: currentScene.edits.length
-        })
-      }
-    }
-  }
-  
-  if (currentScene) scenes.push(currentScene)
-  
-  // If no segments, create basic scenes
-  if (scenes.length === 0) {
-    for (let t = 0; t < duration; t += 10) {
-      scenes.push({
-        start: t,
-        end: Math.min(t + 10, duration),
-        text: '',
-        edits: [{
-          editId: edits[Math.floor(Math.random() * edits.length)],
-          at: t + 2,
-          duration: 2,
-          props: {},
-          layer: 1
-        }]
-      })
-    }
+    scenes.push({
+      start: sceneStart,
+      end: sceneEnd,
+      text: segmentTexts || '',
+      edits: sceneEdits
+    })
   }
   
   return {
@@ -198,56 +193,48 @@ function generateLocalManifest(
   }
 }
 
-// Optional Claude enhancement - keeps it simple
-async function enhanceWithClaude(
-  apiKey: string,
-  manifest: EditManifest,
-  transcript: any
-): Promise<EditManifest | null> {
-  try {
-    const client = new Anthropic({ apiKey })
-    
-    // Very simple prompt
-    const prompt = `Video has ${manifest.scenes.length} scenes. Mode: ${manifest.mode}.
-Current edit count: ${manifest.scenes.reduce((sum, s) => sum + s.edits.length, 0)}.
-Should I add more edits? Reply with just "yes" or "no" and optionally suggest 1-3 timestamps like "yes: 15s, 32s, 48s"`
-
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 100,
-      messages: [{ role: 'user', content: prompt }]
-    })
-
-    const text = response.content[0]
-    if (text.type !== 'text') return null
-    
-    console.log('[claude] suggestion:', text.text)
-    
-    // Parse any suggested timestamps and add edits
-    const timeMatches = text.text.match(/(\d+)s/g)
-    if (timeMatches) {
-      const modeConfig = VIDEO_MODES[manifest.mode] || VIDEO_MODES.documentary
-      for (const match of timeMatches) {
-        const time = parseInt(match)
-        // Find the scene for this time
-        const scene = manifest.scenes.find(s => time >= s.start && time < s.end)
-        if (scene && scene.edits.length < 5) {
-          scene.edits.push({
-            editId: modeConfig.preferredEdits[Math.floor(Math.random() * modeConfig.preferredEdits.length)],
-            at: time,
-            duration: 1.5,
-            props: {},
-            layer: scene.edits.length + 1
-          })
-        }
-      }
-    }
-    
-    return manifest
-  } catch (err) {
-    console.warn('[claude] enhancement error:', err)
-    return null
+// Get random props based on edit type
+function getRandomProps(editId: string, mode: string): Record<string, any> {
+  const props: Record<string, any> = {}
+  
+  switch (editId) {
+    case 'zoom_pulse':
+    case 'mrbeast_energy':
+      props.intensity = 0.8 + Math.random() * 0.6
+      props.zoomPeak = 1.2 + Math.random() * 0.3
+      break
+    case 'shake':
+      props.intensity = mode === 'gaming' ? 1.5 : 1
+      props.frequency = 10 + Math.random() * 10
+      break
+    case 'flash_transition':
+      props.color = ['#ffffff', '#ff0000', '#00ff00'][Math.floor(Math.random() * 3)]
+      break
+    case 'ken_burns':
+    case 'lemmino_cinematic':
+      props.zoomDirection = Math.random() > 0.5 ? 'in' : 'out'
+      props.zoomTarget = 1.1 + Math.random() * 0.1
+      break
+    case 'glitch':
+    case 'gaming_montage':
+      props.effectType = ['rgb', 'glitch', 'speed'][Math.floor(Math.random() * 3)]
+      props.intensity = 1 + Math.random() * 0.5
+      break
+    case 'tiktok_rapid':
+      props.cutType = ['zoom', 'pan', 'flash'][Math.floor(Math.random() * 3)]
+      props.speed = 1.5 + Math.random()
+      break
+    case 'vignette':
+    case 'truecrime_dramatic':
+      props.intensity = 0.6 + Math.random() * 0.4
+      break
+    case 'color_grade':
+      props.temperature = -20 + Math.random() * 40
+      props.contrast = 1 + Math.random() * 0.3
+      break
   }
+  
+  return props
 }
 
 export default { generateEditManifest, VIDEO_MODES }

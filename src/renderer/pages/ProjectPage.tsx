@@ -1,7 +1,8 @@
 // PROJECT PAGE - the main video editing workflow
 // upload -> transcribe -> generate -> render -> export
+// NOW WITH BIG ASS VISUAL FEEDBACK SO U KNOW ITS WORKING
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Upload,
@@ -13,6 +14,7 @@ import {
   FileVideo,
   Loader2,
   FolderOpen,
+  Clock,
 } from 'lucide-react'
 import { useStore } from '../hooks/useStore'
 import clsx from 'clsx'
@@ -25,6 +27,95 @@ const steps = [
   { id: 'render', label: 'Render', icon: Play },
   { id: 'export', label: 'Export', icon: Download },
 ]
+
+// BIG WORKING INDICATOR COMPONENT
+const WorkingOverlay: React.FC<{
+  status: string
+  startTime: number
+  estimatedSeconds: number
+}> = ({ status, startTime, estimatedSeconds }) => {
+  const [elapsed, setElapsed] = useState(0)
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime) / 1000))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [startTime])
+  
+  const remaining = Math.max(0, estimatedSeconds - elapsed)
+  const progress = Math.min(99, (elapsed / estimatedSeconds) * 100)
+  
+  const statusConfig = {
+    transcribing: { emoji: '🎤', text: 'Transcribing Audio', color: 'from-blue-500 to-cyan-500' },
+    generating: { emoji: '🧠', text: 'Generating Edits', color: 'from-purple-500 to-pink-500' },
+    rendering: { emoji: '🎬', text: 'Rendering Video', color: 'from-orange-500 to-red-500' },
+  }[status] || { emoji: '⏳', text: 'Working...', color: 'from-gray-500 to-gray-600' }
+  
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-hits-surface border border-hits-border rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        {/* big spinner */}
+        <div className="relative w-32 h-32 mx-auto mb-6">
+          {/* outer ring */}
+          <div className="absolute inset-0 rounded-full border-4 border-hits-border" />
+          {/* progress ring */}
+          <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100">
+            <circle
+              cx="50" cy="50" r="46"
+              fill="none"
+              stroke="url(#gradient)"
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={`${progress * 2.89} 289`}
+              className="transition-all duration-1000"
+            />
+            <defs>
+              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#3b82f6" />
+                <stop offset="100%" stopColor="#8b5cf6" />
+              </linearGradient>
+            </defs>
+          </svg>
+          {/* center content */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-4xl">{statusConfig.emoji}</span>
+            <span className="text-xl font-bold text-hits-accent">{Math.round(progress)}%</span>
+          </div>
+        </div>
+        
+        {/* status text */}
+        <div className="text-center mb-4">
+          <h3 className="text-xl font-bold text-hits-text mb-1">{statusConfig.text}</h3>
+          <p className="text-hits-muted">Please wait, this is working in the background...</p>
+        </div>
+        
+        {/* time display */}
+        <div className="bg-hits-bg rounded-xl p-4 flex justify-around text-center">
+          <div>
+            <div className="text-2xl font-mono font-bold text-hits-text">
+              {Math.floor(elapsed / 60)}:{(elapsed % 60).toString().padStart(2, '0')}
+            </div>
+            <div className="text-xs text-hits-muted uppercase">Elapsed</div>
+          </div>
+          <div className="border-l border-hits-border" />
+          <div>
+            <div className="text-2xl font-mono font-bold text-hits-accent">
+              ~{Math.floor(remaining / 60)}:{(remaining % 60).toString().padStart(2, '0')}
+            </div>
+            <div className="text-xs text-hits-muted uppercase">Remaining</div>
+          </div>
+        </div>
+        
+        {/* pulse indicator */}
+        <div className="mt-4 flex items-center justify-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-sm text-hits-muted">Processing...</span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export const ProjectPage: React.FC = () => {
   const navigate = useNavigate()
@@ -42,6 +133,7 @@ export const ProjectPage: React.FC = () => {
   } = useStore()
 
   const [dragActive, setDragActive] = useState(false)
+  const [workStartTime, setWorkStartTime] = useState(0)
 
   // set up progress listeners
   useEffect(() => {
@@ -83,6 +175,8 @@ export const ProjectPage: React.FC = () => {
         return { width: 1080, height: 1920 }
       case 'square':
         return { width: 1080, height: 1080 }
+      case 'custom':
+        return { width: 1440, height: 1080 } // 4:3
       default:
         return { width: 1920, height: 1080 }
     }
@@ -104,13 +198,14 @@ export const ProjectPage: React.FC = () => {
     setStatus('transcribing')
     setProgress(0)
     setError(null)
+    setWorkStartTime(Date.now())  // START TIMER
 
     try {
       const result = await window.api.whisper.transcribe(currentProject.sourceFile)
 
       if (result.success && result.data) {
         setTranscript(result.data)
-        setError(null)  // make sure error is cleared
+        setError(null)
         setStatus('idle')
         setProgress(100)
       } else {
@@ -130,6 +225,7 @@ export const ProjectPage: React.FC = () => {
     setStatus('generating')
     setProgress(0)
     setError(null)
+    setWorkStartTime(Date.now())  // START TIMER
 
     try {
       const result = await window.api.claude.generateManifest(
@@ -139,7 +235,6 @@ export const ProjectPage: React.FC = () => {
       )
 
       if (result.success && result.data) {
-        // update dimensions based on output format
         const dims = getDimensions()
         result.data.width = dims.width
         result.data.height = dims.height
@@ -165,6 +260,7 @@ export const ProjectPage: React.FC = () => {
     setStatus('rendering')
     setProgress(0)
     setError(null)
+    setWorkStartTime(Date.now())  // START TIMER
 
     try {
       const outputPath = await window.api.dialog.saveFile(
@@ -193,6 +289,22 @@ export const ProjectPage: React.FC = () => {
     }
   }
 
+  // calculate estimated time based on status
+  const getEstimatedTime = () => {
+    if (currentProject?.status === 'transcribing') return 180  // ~3 min for transcription
+    if (currentProject?.status === 'generating') return 30     // ~30s for manifest
+    if (currentProject?.status === 'rendering') {
+      const duration = currentProject?.manifest?.duration || 60
+      return duration * 2  // roughly 2x video length
+    }
+    return 60
+  }
+
+  // is currently working?
+  const isWorking = currentProject?.status === 'transcribing' || 
+                    currentProject?.status === 'generating' || 
+                    currentProject?.status === 'rendering'
+
   // figure out current step
   const getCurrentStep = () => {
     if (!currentProject.sourceFile) return 0
@@ -207,6 +319,15 @@ export const ProjectPage: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* BIG WORKING OVERLAY - shows when processing */}
+      {isWorking && workStartTime > 0 && (
+        <WorkingOverlay
+          status={currentProject.status}
+          startTime={workStartTime}
+          estimatedSeconds={getEstimatedTime()}
+        />
+      )}
+
       {/* progress steps header */}
       <div className="border-b border-hits-border px-6 py-4">
         <div className="flex items-center justify-between max-w-3xl mx-auto">
@@ -279,7 +400,7 @@ export const ProjectPage: React.FC = () => {
               <p className="text-sm text-hits-muted">Mode: {currentProject.mode}</p>
             </div>
             <div className="text-sm text-hits-muted">
-              {outputFormat === 'vertical' ? '9:16' : outputFormat === 'square' ? '1:1' : '16:9'}
+              {outputFormat === 'vertical' ? '9:16' : outputFormat === 'square' ? '1:1' : outputFormat === 'custom' ? '4:3' : '16:9'}
             </div>
           </div>
 

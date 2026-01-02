@@ -1,0 +1,48 @@
+{
+  "id": "podcast_minimal",
+  "name": "Podcast Minimal",
+  "category": "style",
+  "layer": "background",
+  "priority": 2,
+  "description": "Subtle minimal effects for podcast and talking head content",
+
+  "component": "./podcast_minimal.tsx",
+  "variants": ["waveform", "focus", "fade", "subtle_zoom"],
+
+  "assets": {
+    "required": [],
+    "optional": []
+  },
+
+  "props": {
+    "effectType": { "type": "enum", "options": ["waveform", "fade", "focus", "subtle_zoom"], "default": "waveform" },
+    "color": { "type": "color", "default": "#3b82f6" },
+    "position": { "type": "enum", "options": ["bottom", "center", "top"], "default": "bottom" },
+    "barCount": { "type": "number", "default": 30, "min": 10, "max": 50 },
+    "sensitivity": { "type": "number", "default": 1, "min": 0.5, "max": 2 }
+  },
+
+  "timing": {
+    "min": 60,
+    "max": 600,
+    "default": 90,
+    "cooldown": 30
+  },
+
+  "triggers": {
+    "keywords": ["think", "question", "answer", "opinion", "believe", "conversation", "discuss", "point", "interesting", "actually", "well", "so"],
+    "punctuation": ["?"],
+    "weight": 0.4,
+    "max_per_minute": 8
+  },
+
+  "conflicts": ["mrbeast_energy", "gaming_montage", "tiktok_rapid"],
+  "pairs_with": ["focus", "color_grade", "vignette"],
+  "modes": ["podcast", "aesthetic", "documentary"],
+
+  "fallback": {
+    "enabled": true,
+    "interval": 120,
+    "description": "Subtle ambient effects to keep visual interest without distraction"
+  }
+}

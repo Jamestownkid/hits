@@ -1,0 +1,48 @@
+{
+  "id": "aesthetic_chill",
+  "name": "Aesthetic Chill",
+  "category": "style",
+  "layer": "background",
+  "priority": 2,
+  "description": "Lo-fi chill vibes - film grain, color grading, soft effects",
+
+  "component": "./aesthetic_chill.tsx",
+  "variants": ["grain", "glow", "vintage", "blur", "dreamy"],
+
+  "assets": {
+    "required": [],
+    "optional": ["./assets/grain_overlay.png", "./assets/light_leak.png"]
+  },
+
+  "props": {
+    "effectType": { "type": "enum", "options": ["grain", "glow", "vintage", "blur", "dreamy"], "default": "grain" },
+    "intensity": { "type": "number", "default": 1, "min": 0.5, "max": 2 },
+    "color": { "type": "color", "default": "#ff9f43" },
+    "grainSize": { "type": "number", "default": 0.5, "min": 0.2, "max": 1 },
+    "glowRadius": { "type": "number", "default": 30, "min": 10, "max": 50 }
+  },
+
+  "timing": {
+    "min": 90,
+    "max": 900,
+    "default": 120,
+    "cooldown": 60
+  },
+
+  "triggers": {
+    "keywords": ["chill", "vibe", "mood", "feeling", "aesthetic", "cozy", "relax", "calm", "peaceful", "dreamy", "soft", "gentle", "warm", "sunset", "morning"],
+    "punctuation": [],
+    "weight": 0.5,
+    "max_per_minute": 5
+  },
+
+  "conflicts": ["mrbeast_energy", "gaming_montage", "tiktok_rapid", "truecrime_dramatic"],
+  "pairs_with": ["color_grade", "vignette", "ken_burns", "ambient_drone"],
+  "modes": ["aesthetic", "podcast", "documentary"],
+
+  "fallback": {
+    "enabled": true,
+    "interval": 240,
+    "description": "Maintain chill atmosphere with continuous soft effects"
+  }
+}

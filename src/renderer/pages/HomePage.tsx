@@ -7,18 +7,18 @@ import { Film, Zap, Sparkles, Clock, MonitorPlay, Smartphone, Square } from 'luc
 import { useStore } from '../hooks/useStore'
 import clsx from 'clsx'
 
-// 10 video modes with their vibes
+// 10 video modes with their vibes and EMOJIS
 const videoModes = [
-  { id: 'mrbeast', name: 'MrBeast', description: 'High energy with SFX', hits: '~40/min', gradient: 'mode-mrbeast' },
-  { id: 'lemmino', name: 'LEMMiNO', description: 'Smooth documentary', hits: '~20/min', gradient: 'mode-lemmino' },
-  { id: 'tiktok', name: 'TikTok', description: 'Rapid fire edits', hits: '~55/min', gradient: 'mode-tiktok' },
-  { id: 'documentary', name: 'Documentary', description: 'Classic B-roll', hits: '~15/min', gradient: 'mode-documentary' },
-  { id: 'tutorial', name: 'Tutorial', description: 'Clean educational', hits: '~12/min', gradient: 'mode-tutorial' },
-  { id: 'vox', name: 'Vox Explainer', description: 'Animated text', hits: '~25/min', gradient: 'mode-vox' },
-  { id: 'truecrime', name: 'True Crime', description: 'Dark & dramatic', hits: '~18/min', gradient: 'mode-truecrime' },
-  { id: 'gaming', name: 'Gaming', description: 'Fast montage', hits: '~50/min', gradient: 'mode-gaming' },
-  { id: 'podcast', name: 'Podcast', description: 'Minimal edits', hits: '~8/min', gradient: 'mode-podcast' },
-  { id: 'aesthetic', name: 'Aesthetic', description: 'Chill vibes', hits: '~10/min', gradient: 'mode-aesthetic' },
+  { id: 'mrbeast', name: 'MrBeast', description: 'High energy with SFX', hits: '~40/min', icon: '💰', color: 'bg-red-500' },
+  { id: 'lemmino', name: 'LEMMiNO', description: 'Smooth documentary', hits: '~20/min', icon: '🎬', color: 'bg-blue-600' },
+  { id: 'tiktok', name: 'TikTok', description: 'Rapid fire edits', hits: '~55/min', icon: '📱', color: 'bg-pink-500' },
+  { id: 'documentary', name: 'Documentary', description: 'Classic B-roll', hits: '~15/min', icon: '🎥', color: 'bg-amber-600' },
+  { id: 'tutorial', name: 'Tutorial', description: 'Educational', hits: '~12/min', icon: '📚', color: 'bg-green-600' },
+  { id: 'vox', name: 'Vox Explainer', description: 'Animated text', hits: '~25/min', icon: '📊', color: 'bg-yellow-500' },
+  { id: 'truecrime', name: 'True Crime', description: 'Dark & dramatic', hits: '~18/min', icon: '🔍', color: 'bg-gray-700' },
+  { id: 'gaming', name: 'Gaming', description: 'Fast montage', hits: '~50/min', icon: '🎮', color: 'bg-purple-600' },
+  { id: 'podcast', name: 'Podcast', description: 'Minimal edits', hits: '~8/min', icon: '🎙️', color: 'bg-orange-500' },
+  { id: 'aesthetic', name: 'Aesthetic', description: 'Chill vibes', hits: '~10/min', icon: '✨', color: 'bg-indigo-500' },
 ]
 
 // output format options
@@ -112,7 +112,7 @@ export const HomePage: React.FC = () => {
           <Sparkles size={16} className="text-hits-accent" />
           Choose Your Style
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {videoModes.map((mode) => (
             <button
               key={mode.id}
@@ -120,15 +120,15 @@ export const HomePage: React.FC = () => {
               className="card hover:border-hits-accent transition-all duration-200 text-left group"
             >
               <div
-                className={`w-12 h-12 rounded-lg ${mode.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
+                className={`w-12 h-12 rounded-xl ${mode.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform text-2xl`}
               >
-                <Film size={24} className="text-white" />
+                {mode.icon}
               </div>
-              <h3 className="font-display font-semibold text-lg mb-1">{mode.name}</h3>
-              <p className="text-sm text-hits-muted mb-3">{mode.description}</p>
-              <div className="flex items-center gap-2 text-xs text-hits-accent">
-                <Zap size={12} />
-                {mode.hits} edits
+              <h3 className="font-display font-semibold mb-1">{mode.name}</h3>
+              <p className="text-xs text-hits-muted mb-2">{mode.description}</p>
+              <div className="flex items-center gap-1 text-xs text-hits-accent">
+                <Zap size={10} />
+                {mode.hits}
               </div>
             </button>
           ))}

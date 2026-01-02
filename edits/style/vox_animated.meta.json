@@ -1,0 +1,50 @@
+{
+  "id": "vox_animated",
+  "name": "Vox Animated Text",
+  "category": "style",
+  "layer": "text",
+  "priority": 6,
+  "description": "Clean animated text overlays like Vox explainer videos",
+
+  "component": "./vox_animated.tsx",
+  "variants": ["slide_left", "slide_right", "pop", "type", "fade"],
+
+  "assets": {
+    "required": [],
+    "optional": []
+  },
+
+  "props": {
+    "text": { "type": "string", "default": "Key Point" },
+    "position": { "type": "enum", "options": ["left", "center", "right"], "default": "left" },
+    "size": { "type": "number", "default": 64, "min": 24, "max": 120 },
+    "color": { "type": "color", "default": "#ffffff" },
+    "bgColor": { "type": "color", "default": "#1a1a2e" },
+    "animate": { "type": "enum", "options": ["slide", "pop", "type", "fade"], "default": "slide" },
+    "shadow": { "type": "boolean", "default": true }
+  },
+
+  "timing": {
+    "min": 30,
+    "max": 150,
+    "default": 60,
+    "cooldown": 60
+  },
+
+  "triggers": {
+    "keywords": ["important", "key", "point", "fact", "remember", "note", "statistic", "data", "percent", "number", "million", "billion", "study", "research", "shows"],
+    "punctuation": [":"],
+    "weight": 0.75,
+    "max_per_minute": 10
+  },
+
+  "conflicts": ["subtitle", "lower_third"],
+  "pairs_with": ["zoom_pulse", "color_grade", "documentary_broll"],
+  "modes": ["vox", "documentary", "tutorial", "lemmino"],
+
+  "fallback": {
+    "enabled": false,
+    "interval": 0,
+    "description": "Only show text when triggered by keywords"
+  }
+}

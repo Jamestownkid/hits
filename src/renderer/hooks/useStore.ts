@@ -70,7 +70,7 @@ interface StoreState {
   renderProgress: RenderProgress | null
   
   // video output settings
-  outputFormat: 'horizontal' | 'vertical' | 'square'
+  outputFormat: 'horizontal' | 'vertical' | 'square' | 'custom'
   
   // actions
   createProject: (name: string, mode: string) => Project
@@ -90,7 +90,7 @@ interface StoreState {
   
   setSidebarCollapsed: (collapsed: boolean) => void
   setRenderProgress: (progress: RenderProgress | null) => void
-  setOutputFormat: (format: 'horizontal' | 'vertical' | 'square') => void
+  setOutputFormat: (format: 'horizontal' | 'vertical' | 'square' | 'custom') => void
 }
 
 export const useStore = create<StoreState>((set, get) => ({

@@ -1,0 +1,47 @@
+{
+  "id": "truecrime_dramatic",
+  "name": "True Crime Dramatic",
+  "category": "style",
+  "layer": "effect",
+  "priority": 3,
+  "description": "Dark dramatic effects for true crime tension and suspense",
+
+  "component": "./truecrime_dramatic.tsx",
+  "variants": ["darken", "vignette", "shake", "flicker", "slow_zoom"],
+
+  "assets": {
+    "required": [],
+    "optional": ["./assets/noise.png", "./assets/scratch.png"]
+  },
+
+  "props": {
+    "effectType": { "type": "enum", "options": ["darken", "vignette", "shake", "flicker"], "default": "vignette" },
+    "intensity": { "type": "number", "default": 1, "min": 0.5, "max": 2 },
+    "color": { "type": "color", "default": "#000000" },
+    "flickerSpeed": { "type": "number", "default": 0.8, "min": 0.3, "max": 1.5 }
+  },
+
+  "timing": {
+    "min": 30,
+    "max": 180,
+    "default": 45,
+    "cooldown": 60
+  },
+
+  "triggers": {
+    "keywords": ["murder", "death", "crime", "victim", "suspect", "evidence", "police", "dark", "night", "disappeared", "body", "found", "investigation", "killer", "case", "witness", "blood"],
+    "punctuation": ["...", "—"],
+    "weight": 0.7,
+    "max_per_minute": 18
+  },
+
+  "conflicts": ["mrbeast_energy", "tiktok_rapid", "gaming_montage", "aesthetic_chill"],
+  "pairs_with": ["vignette", "color_grade", "ambient_drone", "lemmino_cinematic"],
+  "modes": ["truecrime", "documentary", "lemmino"],
+
+  "fallback": {
+    "enabled": true,
+    "interval": 150,
+    "description": "Maintain dark atmosphere with periodic vignette/darken effects"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "id": "tiktok_rapid",
+  "name": "TikTok Rapid",
+  "category": "style",
+  "layer": "effect",
+  "priority": 8,
+  "description": "Super fast cuts, zooms and pans for TikTok energy",
+
+  "component": "./tiktok_rapid.tsx",
+  "variants": ["zoom", "pan_left", "pan_right", "flash", "whip"],
+
+  "assets": {
+    "required": [],
+    "optional": []
+  },
+
+  "props": {
+    "cutType": { "type": "enum", "options": ["zoom", "pan", "flash", "whip"], "default": "zoom" },
+    "speed": { "type": "number", "default": 2, "min": 1, "max": 4 },
+    "direction": { "type": "enum", "options": ["left", "right", "up", "down"], "default": "right" },
+    "color": { "type": "color", "default": "#ffffff" },
+    "intensity": { "type": "number", "default": 1, "min": 0.5, "max": 2 }
+  },
+
+  "timing": {
+    "min": 4,
+    "max": 15,
+    "default": 8,
+    "cooldown": 15
+  },
+
+  "triggers": {
+    "keywords": ["wait", "but", "like", "literally", "actually", "so", "then", "okay", "oh", "what", "no", "yes", "omg", "bruh", "nah", "fr", "lowkey", "highkey"],
+    "punctuation": ["?", "!", "..."],
+    "weight": 0.85,
+    "max_per_minute": 55
+  },
+
+  "conflicts": ["lemmino_cinematic", "podcast_minimal", "documentary_broll"],
+  "pairs_with": ["sound_hit", "bass_drop", "subtitle"],
+  "modes": ["tiktok", "gaming", "mrbeast"],
+
+  "fallback": {
+    "enabled": true,
+    "interval": 25,
+    "description": "Rapid cuts every ~0.8 seconds for that TikTok pacing"
+  }
+}
