@@ -1,10 +1,15 @@
 // THE BRAIN - this is where the magic happens fr fr
 // scans the edits folder and builds a catalog of what we can do
 // claude reads this catalog and decides what effects to slap on your video
+// NOW WITH 100+ EFFECTS AND PROPER SCHEMAS!
 
 import * as fs from 'fs'
 import * as path from 'path'
 import { glob } from 'glob'
+
+// Import the new effects registry and schemas
+import EFFECTS_REGISTRY, { getEffectById, ALL_EFFECT_IDS } from '../../edits/hits/registry'
+import { MODE_CONFIGS, getEffectsForMode, getRandomEffectForKeyword, VideoModeType, Effect } from '../../edits/hits/schema'
 
 // what an edit plugin looks like - every edit gotta have this metadata
 export interface EditMeta {
@@ -262,6 +267,109 @@ class EditBrain {
   // get count of registered edits
   getCount(): number {
     return this.edits.size
+  }
+
+  // ==================== NEW REGISTRY METHODS ====================
+  
+  // Get all effects from the 100+ registry
+  getAllRegistryEffects(): Effect[] {
+    return EFFECTS_REGISTRY
+  }
+
+  // Get effects optimized for a specific video mode
+  getEffectsForVideoMode(mode: VideoModeType): Effect[] {
+    return getEffectsForMode(mode, EFFECTS_REGISTRY)
+  }
+
+  // Get mode configuration (edit density, preferred effects, etc)
+  getModeConfig(mode: VideoModeType) {
+    return MODE_CONFIGS[mode]
+  }
+
+  // Get a random effect based on keyword and mode
+  pickEffectForKeyword(keyword: string, mode: VideoModeType, recentlyUsed: string[] = []): Effect | null {
+    return getRandomEffectForKeyword(keyword, mode, EFFECTS_REGISTRY, recentlyUsed)
+  }
+
+  // Generate edit suggestions for a transcript
+  generateEditSuggestions(transcript: string, mode: VideoModeType, durationSeconds: number): Array<{
+    effect: Effect
+    atSecond: number
+    reason: string
+  }> {
+    const modeConfig = MODE_CONFIGS[mode]
+    const editsPerMinute = modeConfig.editsPerMinute
+    const totalEdits = Math.floor((durationSeconds / 60) * editsPerMinute)
+    
+    const suggestions: Array<{ effect: Effect; atSecond: number; reason: string }> = []
+    const words = transcript.split(/\s+/)
+    const recentlyUsed: string[] = []
+    
+    // Spread edits evenly across duration with some randomness
+    for (let i = 0; i < totalEdits; i++) {
+      const baseTime = (i / totalEdits) * durationSeconds
+      const jitter = (Math.random() - 0.5) * (durationSeconds / totalEdits) * 0.5
+      const atSecond = Math.max(0.5, Math.min(durationSeconds - 1, baseTime + jitter))
+      
+      // Try to find a keyword-triggered effect
+      const wordIndex = Math.floor((atSecond / durationSeconds) * words.length)
+      const nearbyWords = words.slice(Math.max(0, wordIndex - 3), wordIndex + 3).join(' ')
+      
+      let effect = this.pickEffectForKeyword(nearbyWords, mode, recentlyUsed)
+      
+      // Fallback to random effect for this mode
+      if (!effect) {
+        const modeEffects = this.getEffectsForVideoMode(mode)
+        const available = modeEffects.filter(e => !recentlyUsed.slice(-5).includes(e.id))
+        effect = available[Math.floor(Math.random() * available.length)] || modeEffects[0]
+      }
+      
+      if (effect) {
+        suggestions.push({
+          effect,
+          atSecond: Math.round(atSecond * 10) / 10,
+          reason: nearbyWords ? `Triggered by: "${nearbyWords.slice(0, 30)}..."` : 'Random placement'
+        })
+        recentlyUsed.push(effect.id)
+      }
+    }
+    
+    return suggestions.sort((a, b) => a.atSecond - b.atSecond)
+  }
+
+  // Generate enhanced catalog for Claude with registry effects
+  generateEnhancedCatalog(mode: VideoModeType): string {
+    const modeConfig = MODE_CONFIGS[mode]
+    const modeEffects = this.getEffectsForVideoMode(mode)
+    
+    let catalog = `## VIDEO EDITING MODE: ${modeConfig.displayName} ${modeConfig.emoji}\n\n`
+    catalog += `${modeConfig.description}\n\n`
+    catalog += `**Settings:**\n`
+    catalog += `- Edits per minute: ${modeConfig.editsPerMinute}\n`
+    catalog += `- Pacing: ${modeConfig.pacing}\n`
+    catalog += `- B-roll frequency: ${Math.round(modeConfig.brollFrequency * 100)}%\n`
+    catalog += `- Text overlay frequency: ${Math.round(modeConfig.textOverlayFrequency * 100)}%\n\n`
+    
+    catalog += `## PREFERRED EFFECTS (${modeEffects.length} available)\n\n`
+    
+    // Group by category
+    const byCategory: Record<string, Effect[]> = {}
+    for (const effect of modeEffects) {
+      if (!byCategory[effect.category]) byCategory[effect.category] = []
+      byCategory[effect.category].push(effect)
+    }
+    
+    for (const [category, effects] of Object.entries(byCategory)) {
+      catalog += `### ${category.toUpperCase()} (${effects.length})\n`
+      for (const effect of effects.slice(0, 10)) { // Top 10 per category
+        const isPref = modeConfig.preferredEffects.includes(effect.id)
+        catalog += `- **${effect.id}**${isPref ? ' ⭐' : ''}: ${effect.description}\n`
+        catalog += `  Triggers: ${effect.triggers.keywords.slice(0, 5).join(', ')}\n`
+      }
+      catalog += '\n'
+    }
+    
+    return catalog
   }
 }
 
