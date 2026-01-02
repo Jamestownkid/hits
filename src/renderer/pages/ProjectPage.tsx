@@ -105,14 +105,21 @@ export const ProjectPage: React.FC = () => {
     setProgress(0)
     setError(null)
 
-    const result = await window.api.whisper.transcribe(currentProject.sourceFile)
+    try {
+      const result = await window.api.whisper.transcribe(currentProject.sourceFile)
 
-    if (result.success) {
-      setTranscript(result.data)
+      if (result.success && result.data) {
+        setTranscript(result.data)
+        setError(null)  // make sure error is cleared
+        setStatus('idle')
+        setProgress(100)
+      } else {
+        setError(result.error || 'transcription failed')
+        setStatus('idle')
+      }
+    } catch (err) {
+      setError('Transcription failed: ' + String(err))
       setStatus('idle')
-      setProgress(100)
-    } else {
-      setError(result.error || 'transcription failed')
     }
   }
 
@@ -124,23 +131,30 @@ export const ProjectPage: React.FC = () => {
     setProgress(0)
     setError(null)
 
-    const result = await window.api.claude.generateManifest(
-      currentProject.transcript,
-      currentProject.mode,
-      currentProject.sourceFile!
-    )
+    try {
+      const result = await window.api.claude.generateManifest(
+        currentProject.transcript,
+        currentProject.mode,
+        currentProject.sourceFile!
+      )
 
-    if (result.success) {
-      // update dimensions based on output format
-      const dims = getDimensions()
-      result.data.width = dims.width
-      result.data.height = dims.height
-      
-      setManifest(result.data)
+      if (result.success && result.data) {
+        // update dimensions based on output format
+        const dims = getDimensions()
+        result.data.width = dims.width
+        result.data.height = dims.height
+        
+        setManifest(result.data)
+        setError(null)
+        setStatus('idle')
+        setProgress(100)
+      } else {
+        setError(result.error || 'generation failed')
+        setStatus('idle')
+      }
+    } catch (err) {
+      setError('Generation failed: ' + String(err))
       setStatus('idle')
-      setProgress(100)
-    } else {
-      setError(result.error || 'generation failed')
     }
   }
 
@@ -152,23 +166,30 @@ export const ProjectPage: React.FC = () => {
     setProgress(0)
     setError(null)
 
-    const outputPath = await window.api.dialog.saveFile(
-      `${currentProject.name.replace(/\s+/g, '_')}.mp4`
-    )
+    try {
+      const outputPath = await window.api.dialog.saveFile(
+        `${currentProject.name.replace(/\s+/g, '_')}.mp4`
+      )
 
-    if (!outputPath) {
+      if (!outputPath) {
+        setStatus('idle')
+        return
+      }
+
+      const result = await window.api.render.start(currentProject.manifest, outputPath)
+
+      if (result.success) {
+        setStatus('complete')
+        setError(null)
+        setProgress(100)
+        setRenderProgress(null)
+      } else {
+        setError(result.error || 'render failed')
+        setStatus('idle')
+      }
+    } catch (err) {
+      setError('Render failed: ' + String(err))
       setStatus('idle')
-      return
-    }
-
-    const result = await window.api.render.start(currentProject.manifest, outputPath)
-
-    if (result.success) {
-      setStatus('complete')
-      setProgress(100)
-      setRenderProgress(null)
-    } else {
-      setError(result.error || 'render failed')
     }
   }
 
