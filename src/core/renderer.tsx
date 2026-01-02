@@ -230,9 +230,9 @@ export const MainVideo: React.FC<MainVideoProps> = ({ manifest }) => {
   const { fps } = useVideoConfig()
   const scenes = manifest.scenes || []
   
-  // VIDEO IS SERVED OVER HTTP! render.ts copies it to public folder
-  // staticFile() builds the correct URL: http://localhost:3000/video_123456_abc.mp4
-  const videoSrc = manifest.sourceVideo ? staticFile(manifest.sourceVideo) : ''
+  // VIDEO IS SERVED OVER HTTP! render.ts copies it to publicDir
+  // Remotion serves publicDir at ROOT, not /public/ - so just use /filename
+  const videoSrc = manifest.sourceVideo ? '/' + manifest.sourceVideo : ''
   
   console.log('[MainVideo] rendering:', { mode: manifest.mode, duration: manifest.duration, scenes: scenes.length, videoSrc })
   
