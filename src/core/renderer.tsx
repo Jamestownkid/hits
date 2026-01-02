@@ -1,37 +1,17 @@
 // EDIT RENDERER - renders the video with effects
 // NO NODE.JS IMPORTS - this runs in browser/Remotion context!
-// USES OFFTHREADVIDEO - bypasses Chrome's file:// URL restrictions!
-// OffthreadVideo uses FFmpeg directly instead of Chrome's video player
+// VIDEO IS SERVED OVER HTTP FROM REMOTION'S DEV SERVER!
+// render.ts copies video to public folder, we just reference it by filename
+// OffthreadVideo fetches it from http://localhost:3000/video.mp4
 
 import React, { useMemo } from 'react'
-import { AbsoluteFill, Sequence, useVideoConfig, OffthreadVideo, Audio, Img, useCurrentFrame, interpolate, spring } from 'remotion'
+import { AbsoluteFill, Sequence, useVideoConfig, OffthreadVideo, Audio, Img, useCurrentFrame, interpolate, spring, staticFile } from 'remotion'
 import { EditInstance, Scene, EditManifest } from '../types/manifest'
 
 // re-export types for backwards compatibility
 export type { EditInstance, Scene, EditManifest }
 
-// FOR OFFTHREADVIDEO - return RAW PATHS, not file:// URLs!
-// OffthreadVideo uses FFmpeg which reads filesystem directly
-// The proxy server REJECTS file:// URLs - only accepts http/https or raw paths
-const toBrowserSrc = (p: string | undefined | null): string => {
-  if (!p) return ''
-  
-  // already a web URL - leave it alone
-  if (/^(https?|blob|data):\/\//i.test(p)) return p
-  
-  // strip file:// protocol if present - FFmpeg wants raw path
-  if (/^file:\/\//i.test(p)) {
-    return decodeURI(p.replace(/^file:\/\//i, ''))
-  }
-  
-  // Windows path - normalize slashes but keep raw
-  if (/^[a-zA-Z]:\\/.test(p)) {
-    return p.replace(/\\/g, '/')
-  }
-  
-  // Linux/Mac absolute path - return as-is, FFmpeg can read it
-  return p
-}
+// NO MORE toBrowserSrc! Video is served over HTTP now
 
 // ============================================
 // BUILT-IN EDIT COMPONENTS
@@ -249,14 +229,17 @@ interface MainVideoProps {
 export const MainVideo: React.FC<MainVideoProps> = ({ manifest }) => {
   const { fps } = useVideoConfig()
   const scenes = manifest.scenes || []
-  const videoSrc = toBrowserSrc(manifest.sourceVideo)
   
-  console.log('[MainVideo] rendering:', { mode: manifest.mode, duration: manifest.duration, scenes: scenes.length })
+  // VIDEO IS SERVED OVER HTTP! render.ts copies it to public folder
+  // staticFile() builds the correct URL: http://localhost:3000/video_123456_abc.mp4
+  const videoSrc = manifest.sourceVideo ? staticFile(manifest.sourceVideo) : ''
+  
+  console.log('[MainVideo] rendering:', { mode: manifest.mode, duration: manifest.duration, scenes: scenes.length, videoSrc })
   
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      {/* Source video - using OffthreadVideo which uses FFmpeg directly */}
-      {/* Chrome can't handle file:// URLs properly, but FFmpeg can read any file */}
+      {/* Source video - served over HTTP from Remotion's dev server */}
+      {/* OffthreadVideo fetches from http://localhost:3000/video.mp4 */}
       {videoSrc ? (
         <AbsoluteFill>
           <OffthreadVideo
