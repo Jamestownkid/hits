@@ -1,10 +1,11 @@
 // RENDER SERVICE - uses remotion to actually render the video
 // GPU accelerated when possible cause aint nobody got time for CPU rendering
-// FIXED: Now works in packaged apps too!
+// FIXED: Works in packaged apps, allows file:// playback
 
 import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
 import * as path from 'path'
+import * as fs from 'fs'
 import { app } from 'electron'
 import { EditManifest } from '../types/manifest'
 
@@ -30,8 +31,14 @@ function getAppPath(): string {
   for (const p of possible) {
     try {
       const testPath = path.join(p, 'src/remotion/index.ts')
-      if (require('fs').existsSync(testPath)) {
+      if (fs.existsSync(testPath)) {
         console.log('[render] found app path:', p)
+        return p
+      }
+      // also try tsx
+      const tsxPath = path.join(p, 'src/remotion/index.tsx')
+      if (fs.existsSync(tsxPath)) {
+        console.log('[render] found app path (tsx):', p)
         return p
       }
     } catch {}
@@ -52,34 +59,25 @@ export class RenderService {
     console.log('[render] bundling remotion project...')
     
     const appPath = getAppPath()
-    const entryPoint = path.join(appPath, 'src/remotion/index.ts')
+    
+    // try .ts first, then .tsx
+    let entryPoint = path.join(appPath, 'src/remotion/index.ts')
+    if (!fs.existsSync(entryPoint)) {
+      entryPoint = path.join(appPath, 'src/remotion/index.tsx')
+    }
     
     console.log('[render] entry point:', entryPoint)
     
-    // check if entry point exists
-    const fs = require('fs')
     if (!fs.existsSync(entryPoint)) {
-      // try tsx extension
-      const tsxEntry = path.join(appPath, 'src/remotion/index.tsx')
-      if (fs.existsSync(tsxEntry)) {
-        console.log('[render] using tsx entry:', tsxEntry)
-        this.bundlePath = await bundle({
-          entryPoint: tsxEntry,
-          onProgress: (progress) => {
-            console.log(`[render] bundle progress: ${Math.round(progress * 100)}%`)
-          }
-        })
-      } else {
-        throw new Error(`Entry point not found: ${entryPoint} or ${tsxEntry}`)
-      }
-    } else {
-      this.bundlePath = await bundle({
-        entryPoint,
-        onProgress: (progress) => {
-          console.log(`[render] bundle progress: ${Math.round(progress * 100)}%`)
-        }
-      })
+      throw new Error(`Remotion entry point not found: ${entryPoint}`)
     }
+    
+    this.bundlePath = await bundle({
+      entryPoint,
+      onProgress: (progress) => {
+        console.log(`[render] bundle progress: ${Math.round(progress * 100)}%`)
+      }
+    })
 
     console.log('[render] bundle complete:', this.bundlePath)
     return this.bundlePath
@@ -124,7 +122,7 @@ export class RenderService {
 
     const startTime = Date.now()
 
-    // render with GPU acceleration
+    // render with GPU acceleration + FILE:// SUPPORT
     await renderMedia({
       composition: compositionWithOverrides,
       serveUrl: bundlePath,
@@ -132,17 +130,18 @@ export class RenderService {
       outputLocation: outputPath,
       inputProps: { manifest },
       
-      // GPU settings for linux
+      // GPU settings for linux + ALLOW FILE:// URLS
       chromiumOptions: {
         gl: 'angle-egl',
-        enableMultiProcessOnLinux: true
+        enableMultiProcessOnLinux: true,
+        disableWebSecurity: true, // CRITICAL: allows file:// video playback
       },
 
       onProgress: ({ renderedFrames, stitchStage }) => {
         const elapsed = (Date.now() - startTime) / 1000
-        const fps = renderedFrames / elapsed
+        const renderFps = renderedFrames / elapsed
         const remaining = totalFrames - renderedFrames
-        const eta = fps > 0 ? remaining / fps : 0
+        const eta = renderFps > 0 ? remaining / renderFps : 0
 
         onProgress?.({
           percent: (renderedFrames / totalFrames) * 100,

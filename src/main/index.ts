@@ -1,5 +1,6 @@
 // HITS - Electron Main Process
 // this is the boss that ties everything together
+// NOW WITH PROGRESS EVENTS so users can see what's happening!
 
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import * as path from 'path'
@@ -36,7 +37,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      webSecurity: false, // ALLOW file:// URLs for video playback
     }
   })
 
@@ -163,13 +165,22 @@ ipcMain.handle('whisper:transcribe', async (_, videoPath: string) => {
   }
 })
 
-// claude manifest generation
+// claude manifest generation - NOW WITH PROGRESS EVENTS!
 ipcMain.handle('claude:generateManifest', async (_, transcript, mode, sourceVideo, aspectRatio) => {
   const apiKey = store.get('anthropicApiKey') as string
-  if (!apiKey) return { success: false, error: 'Claude API key not set - go to Settings' }
+  if (!apiKey) {
+    mainWindow?.webContents.send('claude:progress', { stage: 'error', error: 'Claude API key not set' })
+    return { success: false, error: 'Claude API key not set - go to Settings' }
+  }
 
   try {
+    // STAGE 1: Starting
+    mainWindow?.webContents.send('claude:progress', { stage: 'starting' })
+    
     const assetsDir = (store.get('assetsDir') as string) || path.join(process.cwd(), 'assets')
+    
+    // STAGE 2: Scanning assets
+    mainWindow?.webContents.send('claude:progress', { stage: 'scanning_assets', assetsDir })
     
     // Scan ANY folder for assets - auto-detect by file extension
     let images: string[] = []
@@ -184,7 +195,18 @@ ipcMain.handle('claude:generateManifest', async (_, transcript, mode, sourceVide
       
       console.log('[assets] found:', images.length, 'images,', audio.length, 'audio,', videos.length, 'videos')
     }
+    
+    // STAGE 3: Assets scanned
+    mainWindow?.webContents.send('claude:progress', { 
+      stage: 'assets_scanned', 
+      images: images.length, 
+      audio: audio.length, 
+      videos: videos.length 
+    })
 
+    // STAGE 4: Generating manifest
+    mainWindow?.webContents.send('claude:progress', { stage: 'generating_manifest' })
+    
     const manifest = await generateEditManifest(apiKey, transcript, mode, sourceVideo, { images, audio, videos })
     
     // apply aspect ratio
@@ -200,8 +222,12 @@ ipcMain.handle('claude:generateManifest', async (_, transcript, mode, sourceVide
       manifest.height = 1080
     }
     
+    // STAGE 5: Complete!
+    mainWindow?.webContents.send('claude:progress', { stage: 'complete' })
+    
     return { success: true, data: manifest }
   } catch (err) {
+    mainWindow?.webContents.send('claude:progress', { stage: 'error', error: String(err) })
     return { success: false, error: String(err) }
   }
 })

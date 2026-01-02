@@ -1,6 +1,6 @@
 // EDIT RENDERER - this connects the brain to remotion
 // brain tells us what edits to use, we load em and render em
-// NOW WITH PROPER NULL CHECKS cause undefined.map() is a pain
+// NOW WITH PROPER NULL CHECKS and FILE URL CONVERSION
 
 import React, { Suspense, lazy, useMemo } from 'react'
 import { AbsoluteFill, Sequence, useVideoConfig, Video, Img, Audio } from 'remotion'
@@ -9,6 +9,28 @@ import { EditInstance, Scene, EditManifest } from '../types/manifest'
 
 // re-export types for backwards compatibility
 export type { EditInstance, Scene, EditManifest }
+
+// CONVERT LOCAL PATHS TO file:// URLS
+// browsers cant read /home/... directly - gotta use file:// protocol
+const toBrowserSrc = (p: string | undefined | null): string => {
+  if (!p) return ''
+  
+  // already a URL - leave it alone
+  if (/^(https?|file|blob|data):\/\//i.test(p)) return p
+  
+  // Windows path like C:\Users\...
+  if (/^[a-zA-Z]:\\/.test(p)) {
+    const normalized = p.replace(/\\/g, '/')
+    return `file:///${encodeURI(normalized)}`
+  }
+  
+  // Linux/Mac absolute path like /home/...
+  if (p.startsWith('/')) {
+    return `file://${encodeURI(p)}` // encodes spaces, (), etc.
+  }
+  
+  return p // relative path - let it be
+}
 
 // component cache so we dont import the same component twice
 const componentCache = new Map<string, React.LazyExoticComponent<any>>()
@@ -139,27 +161,34 @@ export const MainVideo: React.FC<MainVideoProps> = ({ manifest }) => {
   // SAFETY: default scenes to empty array
   const scenes = manifest.scenes || []
   
+  // convert source video path to file:// URL
+  const videoSrc = toBrowserSrc(manifest.sourceVideo)
+  
   console.log('[MainVideo] rendering manifest:', {
     mode: manifest.mode,
     duration: manifest.duration,
     scenesCount: scenes.length,
-    sourceVideo: manifest.sourceVideo
+    sourceVideo: manifest.sourceVideo,
+    videoSrc: videoSrc
   })
   
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
       {/* source video as the base layer */}
-      {manifest.sourceVideo && (
+      {videoSrc && (
         <AbsoluteFill>
           <Video
-            src={manifest.sourceVideo}
+            src={videoSrc}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => {
+              console.error('[MainVideo] Video error:', e)
+            }}
           />
         </AbsoluteFill>
       )}
       
       {/* if no source video, show a placeholder */}
-      {!manifest.sourceVideo && (
+      {!videoSrc && (
         <AbsoluteFill style={{ 
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
           display: 'flex',

@@ -1,6 +1,6 @@
 // PROJECT PAGE - the main video editing workflow
 // upload -> transcribe -> generate -> render -> export
-// NOW WITH BIG ASS VISUAL FEEDBACK SO U KNOW ITS WORKING
+// NOW WITH VISIBLE FEEDBACK FOR EVERY STEP - NO MORE CONFUSION!
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -15,6 +15,8 @@ import {
   Loader2,
   FolderOpen,
   Clock,
+  Copy,
+  Check,
 } from 'lucide-react'
 import { useStore } from '../hooks/useStore'
 import clsx from 'clsx'
@@ -28,12 +30,13 @@ const steps = [
   { id: 'export', label: 'Export', icon: Download },
 ]
 
-// BIG WORKING INDICATOR COMPONENT
+// BIG WORKING INDICATOR COMPONENT - shows when stuff is happening
 const WorkingOverlay: React.FC<{
   status: string
   startTime: number
   estimatedSeconds: number
-}> = ({ status, startTime, estimatedSeconds }) => {
+  stageText?: string
+}> = ({ status, startTime, estimatedSeconds, stageText }) => {
   const [elapsed, setElapsed] = useState(0)
   
   useEffect(() => {
@@ -44,13 +47,15 @@ const WorkingOverlay: React.FC<{
   }, [startTime])
   
   const remaining = Math.max(0, estimatedSeconds - elapsed)
-  const progress = Math.min(99, (elapsed / estimatedSeconds) * 100)
+  const progress = Math.min(99, (elapsed / Math.max(1, estimatedSeconds)) * 100)
   
-  const statusConfig = {
+  const statusConfig: Record<string, { emoji: string; text: string; color: string }> = {
     transcribing: { emoji: '🎤', text: 'Transcribing Audio', color: 'from-blue-500 to-cyan-500' },
     generating: { emoji: '🧠', text: 'Generating Edits', color: 'from-purple-500 to-pink-500' },
     rendering: { emoji: '🎬', text: 'Rendering Video', color: 'from-orange-500 to-red-500' },
-  }[status] || { emoji: '⏳', text: 'Working...', color: 'from-gray-500 to-gray-600' }
+  }
+  
+  const config = statusConfig[status] || { emoji: '⏳', text: 'Working...', color: 'from-gray-500 to-gray-600' }
   
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -79,14 +84,17 @@ const WorkingOverlay: React.FC<{
           </svg>
           {/* center content */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl">{statusConfig.emoji}</span>
+            <span className="text-4xl">{config.emoji}</span>
             <span className="text-xl font-bold text-hits-accent">{Math.round(progress)}%</span>
           </div>
         </div>
         
         {/* status text */}
         <div className="text-center mb-4">
-          <h3 className="text-xl font-bold text-hits-text mb-1">{statusConfig.text}</h3>
+          <h3 className="text-xl font-bold text-hits-text mb-1">{config.text}</h3>
+          {stageText && (
+            <p className="text-hits-accent text-sm font-medium mb-1">{stageText}</p>
+          )}
           <p className="text-hits-muted">Please wait, this is working in the background...</p>
         </div>
         
@@ -117,6 +125,47 @@ const WorkingOverlay: React.FC<{
   )
 }
 
+// ERROR DISPLAY with easy copy button
+const ErrorDisplay: React.FC<{ error: string; onClear: () => void }> = ({ error, onClear }) => {
+  const [copied, setCopied] = useState(false)
+  
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(error)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  
+  return (
+    <div className="bg-hits-error/10 border border-hits-error/20 rounded-lg p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 flex-1">
+          <AlertCircle className="text-hits-error flex-shrink-0 mt-0.5" size={20} />
+          <div className="flex-1">
+            <p className="font-medium text-hits-error mb-1">Error</p>
+            <p className="text-sm text-hits-muted break-words">{error}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleCopy}
+            className="p-2 rounded hover:bg-hits-error/20 text-hits-error transition-colors"
+            title="Copy error"
+          >
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+          </button>
+          <button
+            onClick={onClear}
+            className="p-2 rounded hover:bg-hits-error/20 text-hits-error transition-colors text-lg leading-none"
+            title="Clear error"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export const ProjectPage: React.FC = () => {
   const navigate = useNavigate()
   const {
@@ -134,6 +183,7 @@ export const ProjectPage: React.FC = () => {
 
   const [dragActive, setDragActive] = useState(false)
   const [workStartTime, setWorkStartTime] = useState(0)
+  const [generateStage, setGenerateStage] = useState('')
 
   // set up progress listeners
   useEffect(() => {
@@ -147,10 +197,24 @@ export const ProjectPage: React.FC = () => {
       setRenderProgress(data)
       setProgress(data.percent)
     })
+    
+    // NEW: Listen to Claude progress events!
+    const cleanupClaude = window.api.claude.onProgress((data) => {
+      const stage = String(data?.stage || '')
+      setGenerateStage(stage)
+      
+      // update progress based on stage
+      if (stage === 'starting') setProgress(5)
+      if (stage === 'scanning_assets') setProgress(20)
+      if (stage === 'assets_scanned') setProgress(40)
+      if (stage === 'generating_manifest') setProgress(70)
+      if (stage === 'complete') setProgress(100)
+    })
 
     return () => {
       cleanupWhisper()
       cleanupRender()
+      cleanupClaude()
     }
   }, [currentProject, setRenderProgress, setProgress])
 
@@ -191,14 +255,15 @@ export const ProjectPage: React.FC = () => {
     }
   }
 
-  // start transcription
+  // start transcription - PREVENTS DOUBLE CLICKS
   const handleTranscribe = async () => {
     if (!currentProject.sourceFile) return
+    if (currentProject.status !== 'idle') return  // GUARD!
 
     setStatus('transcribing')
     setProgress(0)
     setError(null)
-    setWorkStartTime(Date.now())  // START TIMER
+    setWorkStartTime(Date.now())
 
     try {
       const result = await window.api.whisper.transcribe(currentProject.sourceFile)
@@ -218,14 +283,16 @@ export const ProjectPage: React.FC = () => {
     }
   }
 
-  // generate edit manifest
+  // generate edit manifest - PREVENTS DOUBLE CLICKS
   const handleGenerate = async () => {
     if (!currentProject.transcript) return
+    if (currentProject.status !== 'idle') return  // GUARD!
 
     setStatus('generating')
     setProgress(0)
     setError(null)
-    setWorkStartTime(Date.now())  // START TIMER
+    setWorkStartTime(Date.now())
+    setGenerateStage('starting')
 
     try {
       const result = await window.api.claude.generateManifest(
@@ -251,16 +318,19 @@ export const ProjectPage: React.FC = () => {
       setError('Generation failed: ' + String(err))
       setStatus('idle')
     }
+    
+    setGenerateStage('')
   }
 
-  // start render
+  // start render - PREVENTS DOUBLE CLICKS
   const handleRender = async () => {
     if (!currentProject.manifest) return
+    if (currentProject.status !== 'idle') return  // GUARD!
 
     setStatus('rendering')
     setProgress(0)
     setError(null)
-    setWorkStartTime(Date.now())  // START TIMER
+    setWorkStartTime(Date.now())
 
     try {
       const outputPath = await window.api.dialog.saveFile(
@@ -299,6 +369,19 @@ export const ProjectPage: React.FC = () => {
     }
     return 60
   }
+  
+  // get stage text for generate
+  const getStageText = () => {
+    switch (generateStage) {
+      case 'starting': return 'Starting up...'
+      case 'scanning_assets': return 'Scanning assets folder...'
+      case 'assets_scanned': return 'Assets scanned. Building edit plan...'
+      case 'generating_manifest': return 'Generating edit manifest with AI...'
+      case 'complete': return 'Done!'
+      case 'error': return 'Error occurred'
+      default: return 'Working...'
+    }
+  }
 
   // is currently working?
   const isWorking = currentProject?.status === 'transcribing' || 
@@ -325,6 +408,7 @@ export const ProjectPage: React.FC = () => {
           status={currentProject.status}
           startTime={workStartTime}
           estimatedSeconds={getEstimatedTime()}
+          stageText={currentProject.status === 'generating' ? getStageText() : undefined}
         />
       )}
 
@@ -382,15 +466,9 @@ export const ProjectPage: React.FC = () => {
       {/* main content */}
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-4xl mx-auto space-y-6">
-          {/* error display */}
+          {/* error display with copy button */}
           {currentProject.error && (
-            <div className="bg-hits-error/10 border border-hits-error/20 rounded-lg p-4 flex items-start gap-3">
-              <AlertCircle className="text-hits-error flex-shrink-0" size={20} />
-              <div>
-                <p className="font-medium text-hits-error">Error</p>
-                <p className="text-sm text-hits-muted">{currentProject.error}</p>
-              </div>
-            </div>
+            <ErrorDisplay error={currentProject.error} onClear={() => setError(null)} />
           )}
 
           {/* project info */}
@@ -473,9 +551,16 @@ export const ProjectPage: React.FC = () => {
                       <button
                         onClick={handleTranscribe}
                         disabled={currentProject.status !== 'idle'}
-                        className="btn-primary"
+                        className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Start Transcription
+                        {currentProject.status !== 'idle' ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 size={16} className="animate-spin" />
+                            Working...
+                          </span>
+                        ) : (
+                          'Start Transcription'
+                        )}
                       </button>
                       <p className="text-sm text-hits-muted mt-2">
                         Using Whisper speech-to-text
@@ -508,7 +593,7 @@ export const ProjectPage: React.FC = () => {
                 {currentProject.status === 'generating' && (
                   <span className="text-sm text-hits-accent flex items-center gap-2">
                     <Loader2 size={14} className="animate-spin" />
-                    Working...
+                    {getStageText()}
                   </span>
                 )}
               </div>
@@ -519,7 +604,7 @@ export const ProjectPage: React.FC = () => {
                       <div className="flex justify-center">
                         <div className="w-16 h-16 rounded-full border-4 border-hits-accent border-t-transparent animate-spin" />
                       </div>
-                      <p className="text-hits-accent font-medium">Generating edits with Claude AI...</p>
+                      <p className="text-hits-accent font-medium">{getStageText()}</p>
                       <p className="text-sm text-hits-muted">This may take 10-30 seconds</p>
                     </div>
                   ) : (
@@ -527,9 +612,16 @@ export const ProjectPage: React.FC = () => {
                       <button
                         onClick={handleGenerate}
                         disabled={currentProject.status !== 'idle'}
-                        className="btn-primary"
+                        className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Generate Edit Manifest
+                        {currentProject.status !== 'idle' ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 size={16} className="animate-spin" />
+                            Working...
+                          </span>
+                        ) : (
+                          'Generate Edit Manifest'
+                        )}
                       </button>
                       <p className="text-sm text-hits-muted mt-2">
                         Claude will analyze transcript and pick the right edits
@@ -590,8 +682,19 @@ export const ProjectPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <button onClick={handleRender} className="btn-primary">
-                    Start Render
+                  <button 
+                    onClick={handleRender} 
+                    disabled={currentProject.status !== 'idle'}
+                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {currentProject.status !== 'idle' ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 size={16} className="animate-spin" />
+                        Working...
+                      </span>
+                    ) : (
+                      'Start Render'
+                    )}
                   </button>
                   <p className="text-sm text-hits-muted mt-2">
                     GPU accelerated with Remotion
@@ -605,4 +708,3 @@ export const ProjectPage: React.FC = () => {
     </div>
   )
 }
-

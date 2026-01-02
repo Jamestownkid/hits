@@ -1,5 +1,6 @@
 // PRELOAD SCRIPT - exposes safe APIs to the renderer process
 // this is the bridge between electron main and react UI
+// NOW WITH CLAUDE PROGRESS EVENTS!
 
 import { contextBridge, ipcRenderer } from 'electron'
 
@@ -40,6 +41,7 @@ export interface HitsAPI {
   }
   claude: {
     generateManifest: (transcript: any, mode: string, sourceVideo: string, aspectRatio?: string) => Promise<{ success: boolean; data?: any; error?: string }>
+    onProgress: (callback: (data: any) => void) => () => void  // NEW!
   }
   render: {
     start: (manifest: any, outputPath: string) => Promise<{ success: boolean; error?: string }>
@@ -109,6 +111,12 @@ const api: HitsAPI = {
   claude: {
     generateManifest: (transcript, mode, sourceVideo, aspectRatio) => 
       ipcRenderer.invoke('claude:generateManifest', transcript, mode, sourceVideo, aspectRatio),
+    // NEW: Listen to progress events from generate!
+    onProgress: (callback) => {
+      const handler = (_: any, data: any) => callback(data)
+      ipcRenderer.on('claude:progress', handler)
+      return () => ipcRenderer.removeListener('claude:progress', handler)
+    },
   },
   render: {
     start: (manifest, outputPath) => ipcRenderer.invoke('render:start', manifest, outputPath),
