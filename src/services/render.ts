@@ -1,12 +1,11 @@
 // RENDER SERVICE - renders video using Remotion
-// THE KEY: Video must be copied to publicDir BEFORE bundle() runs!
-// publicDir contents get bundled INTO webpack - so video must exist first
+// THE FIX: Copy video directly INTO the bundle folder AFTER bundling!
+// This bypasses all publicDir/symlink weirdness - file WILL be there
 
 import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
 import * as path from 'path'
 import * as fs from 'fs'
-import * as os from 'os'
 import { app } from 'electron'
 import { EditManifest } from '../types/manifest'
 
@@ -18,61 +17,9 @@ export interface RenderProgress {
   stage: string
 }
 
-// temp folder for videos - must be writable
-const RENDER_TEMP_DIR = path.join(os.tmpdir(), 'hits-render-public')
-
-// ensure temp dir exists
-function ensureTempDir(): string {
-  if (!fs.existsSync(RENDER_TEMP_DIR)) {
-    fs.mkdirSync(RENDER_TEMP_DIR, { recursive: true })
-  }
-  return RENDER_TEMP_DIR
-}
-
 // generate unique filename
 function generateTempVideoName(): string {
   return `video_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp4`
-}
-
-// copy or symlink video (symlink is faster!)
-function copyVideoToPublic(sourcePath: string): string {
-  const tempDir = ensureTempDir()
-  const tempName = generateTempVideoName()
-  const destPath = path.join(tempDir, tempName)
-  
-  const cleanSource = sourcePath.replace(/^file:\/\//i, '')
-  console.log('[render] preparing video:', cleanSource)
-  
-  try {
-    fs.symlinkSync(cleanSource, destPath)
-    console.log('[render] symlinked to:', destPath)
-  } catch {
-    fs.copyFileSync(cleanSource, destPath)
-    console.log('[render] copied to:', destPath)
-  }
-  
-  return tempName
-}
-
-// cleanup temp video
-function cleanupTempVideo(filename: string): void {
-  try {
-    const filePath = path.join(RENDER_TEMP_DIR, filename)
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath)
-      console.log('[render] cleaned up:', filename)
-    }
-  } catch {}
-}
-
-// cleanup all old temp files
-export function cleanupOldTempFiles(): void {
-  try {
-    if (!fs.existsSync(RENDER_TEMP_DIR)) return
-    const files = fs.readdirSync(RENDER_TEMP_DIR)
-    files.forEach(f => { try { fs.unlinkSync(path.join(RENDER_TEMP_DIR, f)) } catch {} })
-    if (files.length) console.log('[render] cleaned', files.length, 'old files')
-  } catch {}
 }
 
 // find app path
@@ -100,25 +47,26 @@ export class RenderService {
     onProgress?: (progress: RenderProgress) => void
   ): Promise<void> {
     let tempVideoName: string | null = null
+    let bundlePath: string | null = null
     
     try {
       console.log('[render] starting:', outputPath)
 
-      // STEP 1: Validate source video
+      // STEP 1: Validate source video and generate temp name
+      let originalVideoPath: string | null = null
       if (manifest.sourceVideo) {
-        const videoPath = manifest.sourceVideo.replace(/^file:\/\//, '')
-        if (!fs.existsSync(videoPath)) {
-          throw new Error(`Video not found: ${videoPath}`)
+        originalVideoPath = manifest.sourceVideo.replace(/^file:\/\//, '')
+        if (!fs.existsSync(originalVideoPath)) {
+          throw new Error(`Video not found: ${originalVideoPath}`)
         }
-        console.log('[render] source:', videoPath)
+        console.log('[render] source video:', originalVideoPath)
         
-        // STEP 2: Copy video to temp dir FIRST (BEFORE bundle!)
-        tempVideoName = copyVideoToPublic(videoPath)
+        // Generate temp name - we'll copy it into bundle later
+        tempVideoName = generateTempVideoName()
         manifest.sourceVideo = tempVideoName
-        console.log('[render] video ready in publicDir:', tempVideoName)
       }
 
-      // STEP 3: Find entry point
+      // STEP 2: Bundle first (no publicDir - we'll copy video in manually)
       const appPath = getAppPath()
       let entryPoint = path.join(appPath, 'src/remotion/index.ts')
       if (!fs.existsSync(entryPoint)) {
@@ -128,19 +76,27 @@ export class RenderService {
         throw new Error(`Entry point not found: ${entryPoint}`)
       }
 
-      // STEP 4: Bundle WITH publicDir - video is already there!
       console.log('[render] bundling...')
-      console.log('[render] publicDir:', RENDER_TEMP_DIR)
-      console.log('[render] files in publicDir:', fs.readdirSync(RENDER_TEMP_DIR))
-      
-      const bundlePath = await bundle({
+      bundlePath = await bundle({
         entryPoint,
-        publicDir: RENDER_TEMP_DIR,  // video is already here!
         onProgress: (p) => console.log(`[render] bundle: ${Math.round(p * 100)}%`)
       })
-      console.log('[render] bundle:', bundlePath)
+      console.log('[render] bundle created:', bundlePath)
 
-      // STEP 5: Render
+      // STEP 3: Copy video directly INTO the bundle folder!
+      // This is the key - Remotion serves from bundlePath, so video must be there
+      if (originalVideoPath && tempVideoName) {
+        const destPath = path.join(bundlePath, tempVideoName)
+        console.log('[render] copying video into bundle:', destPath)
+        fs.copyFileSync(originalVideoPath, destPath)
+        console.log('[render] video copied! size:', fs.statSync(destPath).size, 'bytes')
+        
+        // Verify it's there
+        const filesInBundle = fs.readdirSync(bundlePath).filter(f => f.endsWith('.mp4'))
+        console.log('[render] mp4 files in bundle:', filesInBundle)
+      }
+
+      // STEP 4: Render
       const fps = manifest.fps || 30
       const duration = manifest.duration || 30
       const width = manifest.width || 1920
@@ -184,7 +140,16 @@ export class RenderService {
       console.log('[render] done in', ((Date.now() - startTime) / 1000).toFixed(1), 's')
       
     } finally {
-      if (tempVideoName) cleanupTempVideo(tempVideoName)
+      // Cleanup: delete video from bundle folder
+      if (bundlePath && tempVideoName) {
+        try {
+          const videoInBundle = path.join(bundlePath, tempVideoName)
+          if (fs.existsSync(videoInBundle)) {
+            fs.unlinkSync(videoInBundle)
+            console.log('[render] cleaned up video from bundle')
+          }
+        } catch {}
+      }
     }
   }
 }
