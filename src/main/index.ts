@@ -170,14 +170,22 @@ ipcMain.handle('claude:generateManifest', async (_, transcript, mode, sourceVide
 
   try {
     const assetsDir = (store.get('assetsDir') as string) || path.join(process.cwd(), 'assets')
-    const images = fs.existsSync(path.join(assetsDir, 'images'))
-      ? await glob('**/*.{jpg,jpeg,png,webp}', { cwd: path.join(assetsDir, 'images') })
-      : []
-    const audio = fs.existsSync(path.join(assetsDir, 'sfx'))
-      ? await glob('**/*.{wav,mp3}', { cwd: path.join(assetsDir, 'sfx') })
-      : []
+    
+    // Scan ANY folder for assets - auto-detect by file extension
+    let images: string[] = []
+    let audio: string[] = []
+    let videos: string[] = []
+    
+    if (fs.existsSync(assetsDir)) {
+      // Recursively find all media files regardless of folder structure
+      images = await glob('**/*.{jpg,jpeg,png,webp,gif}', { cwd: assetsDir })
+      audio = await glob('**/*.{wav,mp3,ogg,m4a,aac}', { cwd: assetsDir })
+      videos = await glob('**/*.{mp4,mov,webm,mkv,avi}', { cwd: assetsDir })
+      
+      console.log('[assets] found:', images.length, 'images,', audio.length, 'audio,', videos.length, 'videos')
+    }
 
-    const manifest = await generateEditManifest(apiKey, transcript, mode, sourceVideo, { images, audio })
+    const manifest = await generateEditManifest(apiKey, transcript, mode, sourceVideo, { images, audio, videos })
     
     // apply aspect ratio
     const ratio = aspectRatio || store.get('aspectRatio') || '16:9'
@@ -210,12 +218,11 @@ ipcMain.handle('render:start', async (_, manifest, outputPath) => {
   }
 })
 
-// assets handlers
+// assets handlers - scan ANY folder for media files
 ipcMain.handle('assets:listSfx', async () => {
-  const assetsDir = (store.get('assetsDir') as string) || path.join(process.cwd(), 'assets')
-  const sfxDir = path.join(assetsDir, 'sfx')
-  if (!fs.existsSync(sfxDir)) return []
-  return glob('**/*.{wav,mp3}', { cwd: sfxDir })
+  const assetsDir = (store.get('assetsDir') as string) || ''
+  if (!assetsDir || !fs.existsSync(assetsDir)) return []
+  return glob('**/*.{wav,mp3,ogg,m4a,aac}', { cwd: assetsDir })
 })
 
 ipcMain.handle('assets:listImages', async () => {

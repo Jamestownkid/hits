@@ -328,26 +328,39 @@ export const ProjectPage: React.FC = () => {
           {/* transcription */}
           {currentProject.sourceFile && (
             <div className="card">
-              <h2 className="text-lg font-semibold mb-4">Transcription</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Transcription</h2>
+                {currentProject.status === 'transcribing' && (
+                  <span className="text-sm text-hits-accent flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin" />
+                    Working...
+                  </span>
+                )}
+              </div>
               {!currentProject.transcript ? (
                 <div className="text-center py-8">
-                  <button
-                    onClick={handleTranscribe}
-                    disabled={currentProject.status === 'transcribing'}
-                    className="btn-primary"
-                  >
-                    {currentProject.status === 'transcribing' ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" />
-                        Transcribing...
-                      </>
-                    ) : (
-                      'Start Transcription'
-                    )}
-                  </button>
-                  <p className="text-sm text-hits-muted mt-2">
-                    Using Whisper with word-level timestamps
-                  </p>
+                  {currentProject.status === 'transcribing' ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-center">
+                        <div className="w-16 h-16 rounded-full border-4 border-hits-accent border-t-transparent animate-spin" />
+                      </div>
+                      <p className="text-hits-accent font-medium">Transcribing with Whisper...</p>
+                      <p className="text-sm text-hits-muted">This may take 1-5 minutes depending on video length</p>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleTranscribe}
+                        disabled={currentProject.status !== 'idle'}
+                        className="btn-primary"
+                      >
+                        Start Transcription
+                      </button>
+                      <p className="text-sm text-hits-muted mt-2">
+                        Using Whisper speech-to-text
+                      </p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -369,26 +382,39 @@ export const ProjectPage: React.FC = () => {
           {/* manifest generation */}
           {currentProject.transcript && (
             <div className="card">
-              <h2 className="text-lg font-semibold mb-4">Edit Manifest</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Edit Manifest</h2>
+                {currentProject.status === 'generating' && (
+                  <span className="text-sm text-hits-accent flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin" />
+                    Working...
+                  </span>
+                )}
+              </div>
               {!currentProject.manifest ? (
                 <div className="text-center py-8">
-                  <button
-                    onClick={handleGenerate}
-                    disabled={currentProject.status === 'generating'}
-                    className="btn-primary"
-                  >
-                    {currentProject.status === 'generating' ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      'Generate Edit Manifest'
-                    )}
-                  </button>
-                  <p className="text-sm text-hits-muted mt-2">
-                    Claude will analyze transcript and pick the right edits
-                  </p>
+                  {currentProject.status === 'generating' ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-center">
+                        <div className="w-16 h-16 rounded-full border-4 border-hits-accent border-t-transparent animate-spin" />
+                      </div>
+                      <p className="text-hits-accent font-medium">Generating edits with Claude AI...</p>
+                      <p className="text-sm text-hits-muted">This may take 10-30 seconds</p>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleGenerate}
+                        disabled={currentProject.status !== 'idle'}
+                        className="btn-primary"
+                      >
+                        Generate Edit Manifest
+                      </button>
+                      <p className="text-sm text-hits-muted mt-2">
+                        Claude will analyze transcript and pick the right edits
+                      </p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div>

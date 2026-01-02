@@ -7,50 +7,18 @@ import { Film, Zap, Sparkles, Clock, MonitorPlay, Smartphone, Square } from 'luc
 import { useStore } from '../hooks/useStore'
 import clsx from 'clsx'
 
-// video modes with their vibes
+// 10 video modes with their vibes
 const videoModes = [
-  {
-    id: 'lemmino',
-    name: 'LEMMiNO',
-    description: 'Smooth documentary style with elegant transitions',
-    hits: '~20/min',
-    gradient: 'mode-lemmino',
-  },
-  {
-    id: 'mrbeast',
-    name: 'MrBeast',
-    description: 'High energy with lots of sound effects',
-    hits: '~40/min',
-    gradient: 'mode-mrbeast',
-  },
-  {
-    id: 'tiktok',
-    name: 'TikTok',
-    description: 'Rapid fire edits maximum engagement',
-    hits: '~55/min',
-    gradient: 'mode-tiktok',
-  },
-  {
-    id: 'documentary',
-    name: 'Documentary',
-    description: 'Classic B-roll with subtle effects',
-    hits: '~15/min',
-    gradient: 'mode-documentary',
-  },
-  {
-    id: 'tutorial',
-    name: 'Tutorial',
-    description: 'Clean educational focus',
-    hits: '~12/min',
-    gradient: 'mode-tutorial',
-  },
-  {
-    id: 'beat-history',
-    name: 'Beat History',
-    description: 'True crime dramatic reveals',
-    hits: '~35/min',
-    gradient: 'mode-beat-history',
-  },
+  { id: 'mrbeast', name: 'MrBeast', description: 'High energy with SFX', hits: '~40/min', gradient: 'mode-mrbeast' },
+  { id: 'lemmino', name: 'LEMMiNO', description: 'Smooth documentary', hits: '~20/min', gradient: 'mode-lemmino' },
+  { id: 'tiktok', name: 'TikTok', description: 'Rapid fire edits', hits: '~55/min', gradient: 'mode-tiktok' },
+  { id: 'documentary', name: 'Documentary', description: 'Classic B-roll', hits: '~15/min', gradient: 'mode-documentary' },
+  { id: 'tutorial', name: 'Tutorial', description: 'Clean educational', hits: '~12/min', gradient: 'mode-tutorial' },
+  { id: 'vox', name: 'Vox Explainer', description: 'Animated text', hits: '~25/min', gradient: 'mode-vox' },
+  { id: 'truecrime', name: 'True Crime', description: 'Dark & dramatic', hits: '~18/min', gradient: 'mode-truecrime' },
+  { id: 'gaming', name: 'Gaming', description: 'Fast montage', hits: '~50/min', gradient: 'mode-gaming' },
+  { id: 'podcast', name: 'Podcast', description: 'Minimal edits', hits: '~8/min', gradient: 'mode-podcast' },
+  { id: 'aesthetic', name: 'Aesthetic', description: 'Chill vibes', hits: '~10/min', gradient: 'mode-aesthetic' },
 ]
 
 // output format options
@@ -58,6 +26,7 @@ const outputFormats = [
   { id: 'horizontal', icon: MonitorPlay, label: '16:9', desc: 'YouTube' },
   { id: 'vertical', icon: Smartphone, label: '9:16', desc: 'TikTok/Reels' },
   { id: 'square', icon: Square, label: '1:1', desc: 'Instagram' },
+  { id: 'custom', icon: Square, label: '4:3', desc: 'Classic' },
 ]
 
 export const HomePage: React.FC = () => {
