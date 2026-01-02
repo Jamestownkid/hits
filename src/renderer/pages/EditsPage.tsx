@@ -2,7 +2,7 @@
 // this is the edit browser where users can see whats loaded
 
 import React, { useEffect, useState } from 'react'
-import { Puzzle, RefreshCw, FolderOpen, ExternalLink, Search, Filter } from 'lucide-react'
+import { Puzzle, RefreshCw, FolderOpen, ExternalLink, Search, Plus, X, Check, Copy } from 'lucide-react'
 import { useStore, EditInfo } from '../hooks/useStore'
 import clsx from 'clsx'
 
@@ -17,11 +17,35 @@ const categoryColors: Record<string, string> = {
   background: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
 }
 
+// all the categories for the paste modal
+const ALL_CATEGORIES = ['motion', 'text', 'audio', 'transition', 'effect', 'overlay', 'background']
+
+// example meta.json template
+const META_TEMPLATE = `{
+  "id": "my_cool_effect",
+  "name": "My Cool Effect",
+  "category": "effect",
+  "description": "Does something awesome",
+  "props": [
+    { "name": "intensity", "type": "number", "default": 1, "min": 0, "max": 2 }
+  ],
+  "triggers": ["cool", "awesome", "effect"],
+  "modes": ["mrbeast", "tiktok"]
+}`
+
 export const EditsPage: React.FC = () => {
   const { edits, setEdits, setEditCount } = useStore()
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  
+  // paste edit modal state
+  const [showPasteModal, setShowPasteModal] = useState(false)
+  const [pasteCode, setPasteCode] = useState('')
+  const [pasteMeta, setPasteMeta] = useState(META_TEMPLATE)
+  const [pasteCategory, setPasteCategory] = useState('effect')
+  const [pasteError, setPasteError] = useState('')
+  const [pasteSaving, setPasteSaving] = useState(false)
 
   // load edits on mount
   useEffect(() => {
@@ -51,6 +75,49 @@ export const EditsPage: React.FC = () => {
   // open remotion templates site
   const handleOpenTemplates = () => {
     window.api.shell.openExternal('https://www.reactvideoeditor.com/remotion-templates')
+  }
+
+  // handle paste edit save
+  const handleSavePastedEdit = async () => {
+    setPasteError('')
+    
+    if (!pasteCode.trim()) {
+      setPasteError('paste some remotion component code my guy')
+      return
+    }
+    
+    // try to parse the meta json
+    let meta: any
+    try {
+      meta = JSON.parse(pasteMeta)
+    } catch (e) {
+      setPasteError('meta json is invalid - check the format')
+      return
+    }
+    
+    if (!meta.id) {
+      setPasteError('meta needs an "id" field bruh')
+      return
+    }
+    
+    // update category in meta if different
+    meta.category = pasteCategory
+    
+    setPasteSaving(true)
+    try {
+      const result = await window.api.edits.addFromCode(pasteCode, JSON.stringify(meta, null, 2), pasteCategory)
+      if (result.success) {
+        setShowPasteModal(false)
+        setPasteCode('')
+        setPasteMeta(META_TEMPLATE)
+        await loadEdits()  // refresh the list
+      } else {
+        setPasteError(result.error || 'something went wrong saving')
+      }
+    } catch (e) {
+      setPasteError('failed to save: ' + String(e))
+    }
+    setPasteSaving(false)
   }
 
   // get unique categories
@@ -96,6 +163,10 @@ export const EditsPage: React.FC = () => {
           <button onClick={handleOpenFolder} className="btn-secondary">
             <FolderOpen size={16} />
             Open Folder
+          </button>
+          <button onClick={() => setShowPasteModal(true)} className="btn-secondary">
+            <Plus size={16} />
+            Paste Edit
           </button>
           <button onClick={handleOpenTemplates} className="btn-primary">
             <ExternalLink size={16} />
@@ -273,7 +344,10 @@ export const EditsPage: React.FC = () => {
         </h2>
         <div className="text-sm text-hits-muted space-y-2">
           <p>
-            To add a new edit plugin, create two files in <code className="bg-hits-bg px-1 rounded">/edits/[category]/</code>:
+            <strong>Option 1:</strong> Click "Paste Edit" above to paste Remotion code directly
+          </p>
+          <p>
+            <strong>Option 2:</strong> Create files in <code className="bg-hits-bg px-1 rounded">/edits/[category]/</code>:
           </p>
           <ul className="list-disc list-inside space-y-1 ml-4">
             <li><code className="bg-hits-bg px-1 rounded">[name].tsx</code> - The Remotion component</li>
@@ -288,6 +362,110 @@ export const EditsPage: React.FC = () => {
           </p>
         </div>
       </section>
+
+      {/* PASTE EDIT MODAL */}
+      {showPasteModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-hits-surface rounded-xl border border-hits-border max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-hits-border flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Paste Edit Code</h2>
+              <button 
+                onClick={() => setShowPasteModal(false)}
+                className="p-2 hover:bg-hits-bg rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* category selector */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Category</label>
+                <div className="flex flex-wrap gap-2">
+                  {ALL_CATEGORIES.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setPasteCategory(cat)}
+                      className={clsx(
+                        'px-4 py-2 rounded-lg border capitalize transition-colors',
+                        pasteCategory === cat
+                          ? 'border-hits-accent bg-hits-accent/20 text-hits-accent'
+                          : 'border-hits-border hover:border-hits-accent/50'
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* code input */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Component Code (.tsx)
+                </label>
+                <p className="text-xs text-hits-muted mb-2">
+                  Paste the Remotion component code from reactvideoeditor.com or anywhere else
+                </p>
+                <textarea
+                  value={pasteCode}
+                  onChange={(e) => setPasteCode(e.target.value)}
+                  placeholder={`// paste your remotion component here\nexport default function MyCoolEffect() {\n  const frame = useCurrentFrame();\n  // ...\n}`}
+                  className="w-full h-64 bg-hits-bg border border-hits-border rounded-lg p-4 font-mono text-sm resize-none focus:outline-none focus:border-hits-accent"
+                />
+              </div>
+
+              {/* meta json input */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Metadata (.meta.json)
+                </label>
+                <p className="text-xs text-hits-muted mb-2">
+                  This tells the brain how to use your edit - change the id, name, triggers, and modes
+                </p>
+                <textarea
+                  value={pasteMeta}
+                  onChange={(e) => setPasteMeta(e.target.value)}
+                  className="w-full h-48 bg-hits-bg border border-hits-border rounded-lg p-4 font-mono text-sm resize-none focus:outline-none focus:border-hits-accent"
+                />
+              </div>
+
+              {/* error message */}
+              {pasteError && (
+                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                  {pasteError}
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-hits-border flex justify-end gap-3">
+              <button 
+                onClick={() => setShowPasteModal(false)}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSavePastedEdit}
+                disabled={pasteSaving}
+                className="btn-primary"
+              >
+                {pasteSaving ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    Save Edit
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
