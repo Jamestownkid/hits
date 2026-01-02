@@ -121,7 +121,8 @@ export class RenderService {
     const composition = await selectComposition({
       serveUrl: bundlePath,
       id: 'HitsVideo',
-      inputProps: { manifest }
+      inputProps: { manifest },
+      timeoutInMilliseconds: 300000,  // 5 minutes for OffthreadVideo FFmpeg extraction
     })
 
     // override dimensions from manifest
@@ -143,8 +144,10 @@ export class RenderService {
       outputLocation: outputPath,
       inputProps: { manifest },
       
-      // TIMEOUT: 2 minutes instead of 28 seconds - gives video time to load
-      timeoutInMilliseconds: 120000,
+      // TIMEOUT: 5 minutes - OffthreadVideo uses FFmpeg which can be slow
+      timeoutInMilliseconds: 300000,
+      // concurrency for faster rendering
+      concurrency: 2,
       
       // GPU settings for linux + ALLOW FILE:// URLS
       chromiumOptions: {

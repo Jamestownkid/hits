@@ -1,9 +1,10 @@
 // EDIT RENDERER - renders the video with effects
 // NO NODE.JS IMPORTS - this runs in browser/Remotion context!
-// All edit components are statically imported to avoid bundling issues
+// USES OFFTHREADVIDEO - bypasses Chrome's file:// URL restrictions!
+// OffthreadVideo uses FFmpeg directly instead of Chrome's video player
 
 import React, { useMemo } from 'react'
-import { AbsoluteFill, Sequence, useVideoConfig, Video, Audio, Img, useCurrentFrame, interpolate, spring } from 'remotion'
+import { AbsoluteFill, Sequence, useVideoConfig, OffthreadVideo, Audio, Img, useCurrentFrame, interpolate, spring } from 'remotion'
 import { EditInstance, Scene, EditManifest } from '../types/manifest'
 
 // re-export types for backwards compatibility
@@ -240,13 +241,15 @@ export const MainVideo: React.FC<MainVideoProps> = ({ manifest }) => {
   
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      {/* Source video */}
+      {/* Source video - using OffthreadVideo which uses FFmpeg directly */}
+      {/* Chrome can't handle file:// URLs properly, but FFmpeg can read any file */}
       {videoSrc ? (
         <AbsoluteFill>
-          <Video
+          <OffthreadVideo
             src={videoSrc}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={(e) => console.error('[MainVideo] Video load error:', e)}
+            delayRenderTimeoutInMilliseconds={300000}
+            delayRenderRetries={2}
           />
         </AbsoluteFill>
       ) : (
