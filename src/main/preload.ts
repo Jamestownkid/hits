@@ -18,6 +18,7 @@ export interface HitsAPI {
   }
   dialog: {
     openFile: (filters?: any[]) => Promise<string | null>
+    openFiles: (filters?: any[]) => Promise<string[]>
     openDirectory: () => Promise<string | null>
     saveFile: (defaultName: string) => Promise<string | null>
   }
@@ -31,10 +32,14 @@ export interface HitsAPI {
   }
   whisper: {
     transcribe: (videoPath: string) => Promise<{ success: boolean; data?: any; error?: string }>
+    listModels: () => Promise<any[]>
+    isDownloaded: (model: string) => Promise<boolean>
+    downloadModel: (model: string) => Promise<{ success: boolean; path?: string; error?: string }>
     onProgress: (callback: (data: any) => void) => () => void
+    onDownloadProgress: (callback: (data: any) => void) => () => void
   }
   claude: {
-    generateManifest: (transcript: any, mode: string, sourceVideo: string) => Promise<{ success: boolean; data?: any; error?: string }>
+    generateManifest: (transcript: any, mode: string, sourceVideo: string, aspectRatio?: string) => Promise<{ success: boolean; data?: any; error?: string }>
   }
   render: {
     start: (manifest: any, outputPath: string) => Promise<{ success: boolean; error?: string }>
@@ -51,6 +56,10 @@ export interface HitsAPI {
   }
   edits: {
     openFolder: () => Promise<void>
+    addFromCode: (code: string, meta: string, category: string) => Promise<{ success: boolean; id?: string; error?: string }>
+  }
+  folder: {
+    listMedia: (folderPath: string) => Promise<string[]>
   }
 }
 
@@ -69,6 +78,7 @@ const api: HitsAPI = {
   },
   dialog: {
     openFile: (filters) => ipcRenderer.invoke('dialog:openFile', filters),
+    openFiles: (filters) => ipcRenderer.invoke('dialog:openFiles', filters),
     openDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
     saveFile: (defaultName) => ipcRenderer.invoke('dialog:saveFile', defaultName),
   },
@@ -82,15 +92,23 @@ const api: HitsAPI = {
   },
   whisper: {
     transcribe: (videoPath) => ipcRenderer.invoke('whisper:transcribe', videoPath),
+    listModels: () => ipcRenderer.invoke('whisper:listModels'),
+    isDownloaded: (model) => ipcRenderer.invoke('whisper:isDownloaded', model),
+    downloadModel: (model) => ipcRenderer.invoke('whisper:downloadModel', model),
     onProgress: (callback) => {
       const handler = (_: any, data: any) => callback(data)
       ipcRenderer.on('whisper:progress', handler)
       return () => ipcRenderer.removeListener('whisper:progress', handler)
     },
+    onDownloadProgress: (callback) => {
+      const handler = (_: any, data: any) => callback(data)
+      ipcRenderer.on('whisper:downloadProgress', handler)
+      return () => ipcRenderer.removeListener('whisper:downloadProgress', handler)
+    },
   },
   claude: {
-    generateManifest: (transcript, mode, sourceVideo) => 
-      ipcRenderer.invoke('claude:generateManifest', transcript, mode, sourceVideo),
+    generateManifest: (transcript, mode, sourceVideo, aspectRatio) => 
+      ipcRenderer.invoke('claude:generateManifest', transcript, mode, sourceVideo, aspectRatio),
   },
   render: {
     start: (manifest, outputPath) => ipcRenderer.invoke('render:start', manifest, outputPath),
@@ -111,15 +129,17 @@ const api: HitsAPI = {
   },
   edits: {
     openFolder: () => ipcRenderer.invoke('edits:openFolder'),
+    addFromCode: (code, meta, category) => ipcRenderer.invoke('edits:addFromCode', code, meta, category),
+  },
+  folder: {
+    listMedia: (folderPath) => ipcRenderer.invoke('folder:listMedia', folderPath),
   },
 }
 
 contextBridge.exposeInMainWorld('api', api)
 
-// type declaration for global window
 declare global {
   interface Window {
     api: HitsAPI
   }
 }
-

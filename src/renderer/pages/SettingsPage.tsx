@@ -1,56 +1,93 @@
-// SETTINGS PAGE - API keys and configuration
+// SETTINGS PAGE - API keys, whisper models, and configuration
 // where users set up their stuff
 
 import React, { useState, useEffect } from 'react'
-import { Key, FolderOpen, Cpu, CheckCircle, Save, ExternalLink, Volume2 } from 'lucide-react'
+import { Key, FolderOpen, Cpu, CheckCircle, Save, ExternalLink, Volume2, Download, Loader2 } from 'lucide-react'
+
+interface WhisperModel {
+  name: string
+  size: string
+  downloaded: boolean
+}
 
 export const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState({
     anthropicApiKey: '',
-    whisperModel: 'large-v3',
+    openaiApiKey: '',
+    whisperModel: 'medium',
     outputDir: '',
     assetsDir: '',
+    aspectRatio: '16:9',
   })
   const [saved, setSaved] = useState(false)
   const [sfxCount, setSfxCount] = useState(0)
+  const [models, setModels] = useState<WhisperModel[]>([])
+  const [downloading, setDownloading] = useState<string | null>(null)
+  const [downloadProgress, setDownloadProgress] = useState(0)
 
-  // load settings on mount
+  // load settings and models on mount
   useEffect(() => {
-    const loadSettings = async () => {
+    const load = async () => {
       const config = await window.api.config.getAll()
       setSettings({
         anthropicApiKey: config.anthropicApiKey || '',
-        whisperModel: config.whisperModel || 'large-v3',
+        openaiApiKey: config.openaiApiKey || '',
+        whisperModel: config.whisperModel || 'medium',
         outputDir: config.outputDir || '',
         assetsDir: config.assetsDir || '',
+        aspectRatio: config.aspectRatio || '16:9',
       })
       
-      // count SFX
       const sfx = await window.api.assets.listSfx()
       setSfxCount(sfx.length)
+      
+      // load whisper models
+      const modelList = await window.api.whisper.listModels()
+      setModels(modelList)
     }
-    loadSettings()
+    load()
+
+    // listen for download progress
+    const unsubscribe = window.api.whisper.onDownloadProgress((data) => {
+      setDownloadProgress(data.percent)
+      if (data.percent >= 100) {
+        setDownloading(null)
+        // refresh models list
+        window.api.whisper.listModels().then(setModels)
+      }
+    })
+    
+    return () => unsubscribe()
   }, [])
 
-  // save settings
   const handleSave = async () => {
     await window.api.config.set('anthropicApiKey', settings.anthropicApiKey)
+    await window.api.config.set('openaiApiKey', settings.openaiApiKey)
     await window.api.config.set('whisperModel', settings.whisperModel)
     await window.api.config.set('outputDir', settings.outputDir)
     await window.api.config.set('assetsDir', settings.assetsDir)
+    await window.api.config.set('aspectRatio', settings.aspectRatio)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
-  // select output directory
-  const handleSelectOutputDir = async () => {
-    const dir = await window.api.dialog.openDirectory()
-    if (dir) {
-      setSettings((prev) => ({ ...prev, outputDir: dir }))
+  const handleDownloadModel = async (model: string) => {
+    setDownloading(model)
+    setDownloadProgress(0)
+    const result = await window.api.whisper.downloadModel(model)
+    if (!result.success) {
+      alert(`Failed to download: ${result.error}`)
     }
+    setDownloading(null)
+    const modelList = await window.api.whisper.listModels()
+    setModels(modelList)
   }
 
-  // select assets directory
+  const handleSelectOutputDir = async () => {
+    const dir = await window.api.dialog.openDirectory()
+    if (dir) setSettings((prev) => ({ ...prev, outputDir: dir }))
+  }
+
   const handleSelectAssetsDir = async () => {
     const dir = await window.api.dialog.openDirectory()
     if (dir) {
@@ -75,58 +112,117 @@ export const SettingsPage: React.FC = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
-              Claude API Key
-              <span className="text-hits-muted ml-2">(Required)</span>
+              Claude API Key <span className="text-hits-muted">(Required for editing)</span>
             </label>
             <input
               type="password"
               value={settings.anthropicApiKey}
-              onChange={(e) =>
-                setSettings((prev) => ({ ...prev, anthropicApiKey: e.target.value }))
-              }
+              onChange={(e) => setSettings((prev) => ({ ...prev, anthropicApiKey: e.target.value }))}
               placeholder="sk-ant-..."
               className="input"
             />
             <p className="text-xs text-hits-muted mt-1">
-              Get your key from{' '}
-              <button
-                onClick={() => window.api.shell.openExternal('https://console.anthropic.com')}
-                className="text-hits-accent hover:underline"
-              >
+              Get from{' '}
+              <button onClick={() => window.api.shell.openExternal('https://console.anthropic.com')} className="text-hits-accent hover:underline">
                 console.anthropic.com
               </button>
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              OpenAI API Key <span className="text-hits-muted">(Optional - fallback transcription)</span>
+            </label>
+            <input
+              type="password"
+              value={settings.openaiApiKey}
+              onChange={(e) => setSettings((prev) => ({ ...prev, openaiApiKey: e.target.value }))}
+              placeholder="sk-..."
+              className="input"
+            />
+            <p className="text-xs text-hits-muted mt-1">
+              Optional: Used as fallback if local Whisper fails
             </p>
           </div>
         </div>
       </section>
 
-      {/* Whisper settings */}
+      {/* Whisper models */}
       <section className="card mb-6">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Cpu size={20} className="text-hits-accent" />
-          Whisper Settings
+          Whisper Models
         </h2>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Model</label>
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-2">Active Model</label>
           <select
             value={settings.whisperModel}
-            onChange={(e) =>
-              setSettings((prev) => ({ ...prev, whisperModel: e.target.value }))
-            }
+            onChange={(e) => setSettings((prev) => ({ ...prev, whisperModel: e.target.value }))}
             className="input"
           >
-            <option value="tiny">Tiny (fastest)</option>
-            <option value="base">Base</option>
-            <option value="small">Small</option>
-            <option value="medium">Medium</option>
-            <option value="large-v2">Large v2</option>
-            <option value="large-v3">Large v3 (recommended)</option>
-            <option value="large-v3-turbo">Large v3 Turbo</option>
+            {models.map((m) => (
+              <option key={m.name} value={m.name} disabled={!m.downloaded}>
+                {m.name} ({m.size}) {m.downloaded ? '✓' : '- not downloaded'}
+              </option>
+            ))}
           </select>
-          <p className="text-xs text-hits-muted mt-1">
-            Bigger models = better quality but slower. GPU recommended for large models.
-          </p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium mb-2">Download Models</p>
+          {models.map((m) => (
+            <div key={m.name} className="flex items-center justify-between bg-hits-bg rounded-lg p-3">
+              <div>
+                <span className="font-medium">{m.name}</span>
+                <span className="text-hits-muted ml-2 text-sm">{m.size}</span>
+              </div>
+              {m.downloaded ? (
+                <span className="text-hits-success flex items-center gap-1 text-sm">
+                  <CheckCircle size={16} /> Downloaded
+                </span>
+              ) : downloading === m.name ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <Loader2 size={16} className="animate-spin" />
+                  {downloadProgress.toFixed(0)}%
+                </div>
+              ) : (
+                <button onClick={() => handleDownloadModel(m.name)} className="btn-secondary text-sm py-1">
+                  <Download size={14} /> Download
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-hits-muted mt-3">
+          💡 Tip: Start with "medium" - good balance of speed and quality. Use "tiny" for testing.
+        </p>
+      </section>
+
+      {/* Aspect Ratio */}
+      <section className="card mb-6">
+        <h2 className="text-lg font-semibold mb-4">Default Aspect Ratio</h2>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { value: '16:9', label: '16:9', desc: 'YouTube' },
+            { value: '9:16', label: '9:16', desc: 'TikTok/Reels' },
+            { value: '1:1', label: '1:1', desc: 'Square' },
+            { value: '4:3', label: '4:3', desc: 'Classic' },
+          ].map((r) => (
+            <button
+              key={r.value}
+              onClick={() => setSettings((prev) => ({ ...prev, aspectRatio: r.value }))}
+              className={`p-3 rounded-lg border-2 transition-all ${
+                settings.aspectRatio === r.value
+                  ? 'border-hits-accent bg-hits-accent/10'
+                  : 'border-hits-border hover:border-hits-accent/50'
+              }`}
+            >
+              <div className="font-bold">{r.label}</div>
+              <div className="text-xs text-hits-muted">{r.desc}</div>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -138,43 +234,14 @@ export const SettingsPage: React.FC = () => {
         </h2>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
-            Assets Directory (SFX, Images)
-          </label>
+          <label className="block text-sm font-medium mb-2">Assets Directory</label>
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={settings.assetsDir}
-              readOnly
-              placeholder="Select folder with sfx/ and images/ subfolders"
-              className="input flex-1"
-            />
-            <button onClick={handleSelectAssetsDir} className="btn-secondary">
-              Browse
-            </button>
+            <input type="text" value={settings.assetsDir} readOnly placeholder="Select folder..." className="input flex-1" />
+            <button onClick={handleSelectAssetsDir} className="btn-secondary">Browse</button>
           </div>
           <p className="text-xs text-hits-muted mt-1">
-            {sfxCount > 0 ? (
-              <span className="text-hits-success">{sfxCount} sound effects loaded</span>
-            ) : (
-              'Point to a folder with sfx/ and images/ subfolders'
-            )}
+            {sfxCount > 0 ? <span className="text-hits-success">{sfxCount} sound effects loaded</span> : 'Point to folder with sfx/ and images/ subfolders'}
           </p>
-        </div>
-
-        {/* Audio pack info */}
-        <div className="bg-hits-bg rounded-lg p-4">
-          <p className="text-sm text-hits-muted mb-3">
-            Hits works best with a collection of sound effects. Use the included AUDIO folder
-            or download our free starter pack.
-          </p>
-          <div className="text-xs text-hits-muted">
-            Expected structure:
-            <ul className="list-disc list-inside mt-1 ml-2">
-              <li>assets/sfx/*.mp3 - Sound effects</li>
-              <li>assets/images/*.jpg - B-roll images</li>
-            </ul>
-          </div>
         </div>
       </section>
 
@@ -188,16 +255,8 @@ export const SettingsPage: React.FC = () => {
         <div>
           <label className="block text-sm font-medium mb-2">Default Output Directory</label>
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={settings.outputDir}
-              readOnly
-              placeholder="Select folder..."
-              className="input flex-1"
-            />
-            <button onClick={handleSelectOutputDir} className="btn-secondary">
-              Browse
-            </button>
+            <input type="text" value={settings.outputDir} readOnly placeholder="Select folder..." className="input flex-1" />
+            <button onClick={handleSelectOutputDir} className="btn-secondary">Browse</button>
           </div>
         </div>
       </section>
@@ -206,13 +265,11 @@ export const SettingsPage: React.FC = () => {
       <div className="flex items-center justify-end gap-4">
         {saved && (
           <span className="flex items-center gap-2 text-hits-success">
-            <CheckCircle size={18} />
-            Settings saved
+            <CheckCircle size={18} /> Settings saved
           </span>
         )}
         <button onClick={handleSave} className="btn-primary">
-          <Save size={18} />
-          Save Settings
+          <Save size={18} /> Save Settings
         </button>
       </div>
 
@@ -220,37 +277,20 @@ export const SettingsPage: React.FC = () => {
       <section className="mt-8 card bg-hits-accent/5 border-hits-accent/20">
         <h2 className="text-lg font-semibold mb-4">Resources</h2>
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <button
-            onClick={() => window.api.shell.openExternal('https://www.remotion.dev/docs')}
-            className="flex items-center gap-2 text-hits-muted hover:text-hits-accent"
-          >
-            <ExternalLink size={14} />
-            Remotion Docs
+          <button onClick={() => window.api.shell.openExternal('https://www.remotion.dev/docs')} className="flex items-center gap-2 text-hits-muted hover:text-hits-accent">
+            <ExternalLink size={14} /> Remotion Docs
           </button>
-          <button
-            onClick={() => window.api.shell.openExternal('https://www.reactvideoeditor.com/remotion-templates')}
-            className="flex items-center gap-2 text-hits-muted hover:text-hits-accent"
-          >
-            <ExternalLink size={14} />
-            Edit Templates
+          <button onClick={() => window.api.shell.openExternal('https://www.reactvideoeditor.com/remotion-templates')} className="flex items-center gap-2 text-hits-muted hover:text-hits-accent">
+            <ExternalLink size={14} /> Edit Templates
           </button>
-          <button
-            onClick={() => window.api.shell.openExternal('https://console.anthropic.com')}
-            className="flex items-center gap-2 text-hits-muted hover:text-hits-accent"
-          >
-            <ExternalLink size={14} />
-            Claude Console
+          <button onClick={() => window.api.shell.openExternal('https://console.anthropic.com')} className="flex items-center gap-2 text-hits-muted hover:text-hits-accent">
+            <ExternalLink size={14} /> Claude Console
           </button>
-          <button
-            onClick={() => window.api.edits.openFolder()}
-            className="flex items-center gap-2 text-hits-muted hover:text-hits-accent"
-          >
-            <FolderOpen size={14} />
-            Open Edits Folder
+          <button onClick={() => window.api.edits.openFolder()} className="flex items-center gap-2 text-hits-muted hover:text-hits-accent">
+            <FolderOpen size={14} /> Open Edits Folder
           </button>
         </div>
       </section>
     </div>
   )
 }
-

@@ -12,12 +12,39 @@ export const VIDEO_MODES: Record<string, {
   description: string
   preferredCategories: string[]
 }> = {
+  // DOCUMENTARY STYLES
   lemmino: {
     name: 'LEMMiNO Documentary',
     hitsPerMinute: 20,
     description: 'Smooth, minimal, professional documentary style. Focus on ken burns, subtle zooms, and elegant text reveals. Very clean and cinematic.',
     preferredCategories: ['motion', 'text', 'effect']
   },
+  documentary: {
+    name: 'Standard Documentary',
+    hitsPerMinute: 15,
+    description: 'Classic documentary feel with B-roll images, subtle color grading, minimal but impactful effects.',
+    preferredCategories: ['overlay', 'effect', 'text']
+  },
+  vox: {
+    name: 'Vox Explainer',
+    hitsPerMinute: 25,
+    description: 'Educational explainer with animated text, infographics, and smooth transitions. Clean and informative.',
+    preferredCategories: ['text', 'overlay', 'motion']
+  },
+  'true-crime': {
+    name: 'True Crime',
+    hitsPerMinute: 30,
+    description: 'Dark, suspenseful documentary with dramatic zooms, vignette, and tense sound effects.',
+    preferredCategories: ['effect', 'audio', 'motion', 'text']
+  },
+  'nature-doc': {
+    name: 'Nature Documentary',
+    hitsPerMinute: 10,
+    description: 'David Attenborough style. Slow ken burns, elegant transitions, minimal text. Let the visuals breathe.',
+    preferredCategories: ['motion', 'effect']
+  },
+  
+  // HIGH ENERGY STYLES
   mrbeast: {
     name: 'MrBeast Style',
     hitsPerMinute: 40,
@@ -30,23 +57,79 @@ export const VIDEO_MODES: Record<string, {
     description: 'Rapid fire edits, constant zooms, meme sounds, shake effects, maximum engagement. Every second needs something.',
     preferredCategories: ['motion', 'audio', 'transition']
   },
-  documentary: {
-    name: 'Standard Documentary',
-    hitsPerMinute: 15,
-    description: 'Classic documentary feel with B-roll images, subtle color grading, minimal but impactful effects.',
-    preferredCategories: ['overlay', 'effect', 'text']
+  youtube: {
+    name: 'YouTube Shorts',
+    hitsPerMinute: 45,
+    description: 'Vertical format optimized. Quick cuts, big text, sound effects, keep attention in the first 3 seconds.',
+    preferredCategories: ['motion', 'text', 'audio', 'transition']
   },
+  gaming: {
+    name: 'Gaming/Montage',
+    hitsPerMinute: 50,
+    description: 'Fast paced gaming content. Glitch effects, bass drops, shake on impacts, flashy transitions.',
+    preferredCategories: ['motion', 'audio', 'transition', 'effect']
+  },
+  
+  // EDUCATIONAL STYLES
   tutorial: {
     name: 'Tutorial/How-To',
     hitsPerMinute: 12,
     description: 'Educational focus with clear text reveals, highlights, and step indicators. Keep it informative.',
     preferredCategories: ['text', 'overlay']
   },
+  course: {
+    name: 'Online Course',
+    hitsPerMinute: 8,
+    description: 'Very clean, minimal distractions. Focus on content with subtle highlights and section markers.',
+    preferredCategories: ['text', 'overlay']
+  },
+  
+  // CINEMATIC STYLES
+  cinematic: {
+    name: 'Cinematic',
+    hitsPerMinute: 18,
+    description: 'Film-like quality with letterboxing, color grading, dramatic zooms, and atmospheric effects.',
+    preferredCategories: ['effect', 'motion', 'transition']
+  },
+  trailer: {
+    name: 'Movie Trailer',
+    hitsPerMinute: 35,
+    description: 'Epic trailer vibes. Dramatic bass drops, flash transitions, big text reveals, building tension.',
+    preferredCategories: ['audio', 'transition', 'text', 'effect']
+  },
+  
+  // CHILL STYLES
+  'chill-essay': {
+    name: 'Chill Essay',
+    hitsPerMinute: 15,
+    description: 'Relaxed video essay style. Smooth transitions, subtle effects, thoughtful pacing.',
+    preferredCategories: ['motion', 'effect', 'text']
+  },
+  podcast: {
+    name: 'Podcast/Interview',
+    hitsPerMinute: 10,
+    description: 'Clean talking head format. Lower thirds for names, subtle zooms on emphasis, minimal effects.',
+    preferredCategories: ['overlay', 'motion', 'text']
+  },
+  aesthetic: {
+    name: 'Aesthetic/ASMR',
+    hitsPerMinute: 8,
+    description: 'Soft, calming vibes. Smooth slow motion, gentle color grading, minimal jarring effects.',
+    preferredCategories: ['effect', 'motion']
+  },
+  
+  // SPECIAL STYLES  
   'beat-history': {
     name: 'Beat History',
     hitsPerMinute: 35,
     description: 'True crime and history style with dramatic reveals, sound effects, and visual emphasis on key moments.',
     preferredCategories: ['audio', 'motion', 'text', 'transition']
+  },
+  vlog: {
+    name: 'Vlog Style',
+    hitsPerMinute: 22,
+    description: 'Casual vlog feel. Quick cuts, zoom ins on reactions, text pop-ups, keeping it fun and personal.',
+    preferredCategories: ['motion', 'text', 'transition']
   },
   custom: {
     name: 'Custom',
