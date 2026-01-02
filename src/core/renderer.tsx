@@ -10,12 +10,26 @@ import { EditInstance, Scene, EditManifest } from '../types/manifest'
 // re-export types for backwards compatibility
 export type { EditInstance, Scene, EditManifest }
 
-// CONVERT LOCAL PATHS TO file:// URLS
+// FOR OFFTHREADVIDEO - return RAW PATHS, not file:// URLs!
+// OffthreadVideo uses FFmpeg which reads filesystem directly
+// The proxy server REJECTS file:// URLs - only accepts http/https or raw paths
 const toBrowserSrc = (p: string | undefined | null): string => {
   if (!p) return ''
-  if (/^(https?|file|blob|data):\/\//i.test(p)) return p
-  if (/^[a-zA-Z]:\\/.test(p)) return `file:///${encodeURI(p.replace(/\\/g, '/'))}`
-  if (p.startsWith('/')) return `file://${encodeURI(p)}`
+  
+  // already a web URL - leave it alone
+  if (/^(https?|blob|data):\/\//i.test(p)) return p
+  
+  // strip file:// protocol if present - FFmpeg wants raw path
+  if (/^file:\/\//i.test(p)) {
+    return decodeURI(p.replace(/^file:\/\//i, ''))
+  }
+  
+  // Windows path - normalize slashes but keep raw
+  if (/^[a-zA-Z]:\\/.test(p)) {
+    return p.replace(/\\/g, '/')
+  }
+  
+  // Linux/Mac absolute path - return as-is, FFmpeg can read it
   return p
 }
 
